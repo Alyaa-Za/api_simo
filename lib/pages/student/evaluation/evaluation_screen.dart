@@ -13,129 +13,84 @@ class EvaluationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
-      appBar: AppBar(
-        title: const Text("تقييم الأداء التدريبي"),
-        backgroundColor: AppColors.primaryBlue,
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _fetchEvaluationData(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF4F7FF), // خلفية هادئة وفخمة
+        body: FutureBuilder<Map<String, dynamic>>(
+          future: _fetchEvaluationData(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return _buildNoEvaluationState();
-          }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return _buildNoEvaluationState();
+            }
 
-          final eval = snapshot.data!;
+            final eval = snapshot.data!;
+            final int score = eval['final_score'] ?? 0;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                _buildFinalScoreCard(eval['final_score'] ?? 0),
-
-                const SizedBox(height: 25),
-
-                _sectionTitle("تفاصيل المهارات"),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15)],
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // 1. [Header الفخم]: يحتوي على الدرجة النهائية
+                SliverAppBar(
+                  expandedHeight: 280.0,
+                  pinned: true,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: _buildHeaderGradient(score),
                   ),
-                  child: Column(
-                    children: [
-                      _buildRatingRow("المهارات التقنية", eval['technical_skills'] ?? 0),
-                      _buildRatingRow("الالتزام والضبط", eval['commitment'] ?? 0),
-                      _buildRatingRow("العمل بروح الفريق", eval['teamwork'] ?? 0),
-                      _buildRatingRow("الانضباط بالحضور", eval['attendance'] ?? 0),
-                    ],
-                  ),
+                  title: Text("تقييم الأداء النهائي",
+                      style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
+                  centerTitle: true,
                 ),
 
-                const SizedBox(height: 25),
+                // 2. [محتوى التقييم]
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(25),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionHeader("تفاصيل النتيجة المعتمدة", Icons.verified_user_rounded),
+                        _buildScoreDetailCard(score),
 
-                _sectionTitle("ملاحظات المشرف"),
-                const SizedBox(height: 10),
-                _buildCommentSection(eval['comments'] ?? "لا توجد ملاحظات إضافية مرصودة حالياً."),
+                        const SizedBox(height: 30),
 
-                const SizedBox(height: 40),
+                        _buildSectionHeader("ملاحظات المشرف الميداني", Icons.comment_bank_rounded),
+                        _buildCommentCard(eval['comments'] ?? "تم إنهاء التدريب بنجاح، ولا توجد ملاحظات إضافية مرصودة حالياً."),
+
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+                ),
               ],
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildFinalScoreCard(int score) {
+  Widget _buildHeaderGradient(int score) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 35),
-      decoration: BoxDecoration(
-        gradient: AppColors.buttonGradient,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 10))],
+      decoration: const BoxDecoration(
+        gradient: AppColors.splashGradient,
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(50), bottomRight: Radius.circular(50)),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text("النتيجة النهائية المعتمدة", style: TextStyle(color: Colors.white70, fontSize: 14)),
-          const SizedBox(height: 10),
-          Text("$score%", style: const TextStyle(color: Colors.white, fontSize: 55, fontWeight: FontWeight.w900)),
-          Text(
-            score >= 90 ? "تقدير: ممتاز جداً" : score >= 80 ? "تقدير: جيد جداً" : "تقدير: ناجح",
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRatingRow(String label, int rating) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: GoogleFonts.tajawal(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textDark)),
-          Row(
-            children: List.generate(5, (index) => Icon(
-              index < rating ? Icons.star_rounded : Icons.star_outline_rounded,
-              color: index < rating ? Colors.orange : Colors.grey[300],
-              size: 24,
-            )),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCommentSection(String comment) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.orange.withOpacity(0.2)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.comment_bank_outlined, color: Colors.orange, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
+          const SizedBox(height: 40),
+          Text("$score%", style: const TextStyle(color: Colors.white, fontSize: 80, fontWeight: FontWeight.w900, letterSpacing: -2)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
             child: Text(
-              comment,
-              style: GoogleFonts.tajawal(height: 1.6, color: Colors.black87, fontSize: 13),
+              _getGradeText(score),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
         ],
@@ -143,11 +98,83 @@ class EvaluationScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionTitle(String title) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Text(title, style: GoogleFonts.tajawal(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+  Widget _buildScoreDetailCard(int score) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(25),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20)],
+      ),
+      child: Row(
+        children: [
+          _buildCircleIcon(Icons.stars_rounded, Colors.orange),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("المجموع العام", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                Text("حصلت على $score درجة من أصل 100", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  Widget _buildCommentCard(String comment) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(25),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.format_quote_rounded, color: AppColors.primaryBlue, size: 30),
+          const SizedBox(height: 10),
+          Text(
+            comment,
+            style: GoogleFonts.tajawal(height: 1.8, color: Colors.black87, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15, right: 5),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.primaryBlue),
+          const SizedBox(width: 10),
+          Text(title, style: GoogleFonts.tajawal(fontSize: 16, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCircleIcon(IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+      child: Icon(icon, color: color, size: 28),
+    );
+  }
+
+  String _getGradeText(int score) {
+    if (score >= 90) return "تقدير: ممتاز جداً ";
+    if (score >= 80) return "تقدير: جيد جداً ";
+    if (score >= 70) return "تقدير: جيد ";
+    return "تقدير: ناجح";
   }
 
   Widget _buildNoEvaluationState() {
@@ -155,11 +182,19 @@ class EvaluationScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.pending_actions_rounded, size: 80, color: Colors.grey[300]),
-          const SizedBox(height: 15),
-          Text("لم يتم رصد تقييمك النهائي بعد", style: GoogleFonts.tajawal(color: Colors.grey, fontSize: 15)),
-          const SizedBox(height: 5),
-          Text("سيظهر هنا فور اعتماده من قبل جهة التدريب", style: GoogleFonts.tajawal(color: Colors.grey, fontSize: 12)),
+          Container(
+            padding: const EdgeInsets.all(30),
+            decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
+            child: Icon(Icons.hourglass_empty_rounded, size: 80, color: Colors.grey[300]),
+          ),
+          const SizedBox(height: 25),
+          Text("التقييم قيد المراجعة", style: GoogleFonts.tajawal(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40),
+            child: Text("لم يتم رصد نتيجتك النهائية بعد. سيتم إخطارك فور اعتمادها من قِبل جهة التدريب.",
+                textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, height: 1.5)),
+          ),
         ],
       ),
     );

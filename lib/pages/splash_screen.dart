@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ftms_final/pages/institution/institution_auth_guard.dart';
 import 'package:ftms_final/pages/student/main_wrapper.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../widgets/bubble_background.dart';
@@ -46,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (_isLoggedIn) {
       dest = _role == 'student'
           ? const MainWrapper()
-          : const InstitutionHomeScreen();
+          : const InstitutionMainWrapper();
     } else {
       dest = const OnboardingScreen();
     }
@@ -108,14 +109,22 @@ class _SplashScreenState extends State<SplashScreen>
                   const SizedBox(height: 8),
 
                   Text(
-                    'ترينكس',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.white.withOpacity(0.80),
-                      letterSpacing: 0.2,
+                    'تـريـنـكـس',
+                    style: GoogleFonts.tajawal(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.15),
+                          offset: const Offset(0, 4),
+                          blurRadius: 8,
+                        ),
+                      ],
                     ),
                   ),
+
                 ],
               ),
             ),

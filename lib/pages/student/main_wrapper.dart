@@ -41,12 +41,21 @@ class _MainWrapperState extends State<MainWrapper> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FD),
 
-        endDrawer: _currentIndex == 4 ? const SettingsSideBar() : null,
+        endDrawer: _currentIndex == 4 ? const StudentSettingsSideBar() : null,
 
         appBar: AppBar(
           backgroundColor: AppColors.primaryBlue,
           elevation: 0,
           centerTitle: true,
+          actions: [
+            if (_currentIndex == 4)
+              Builder(builder: (context) {
+                return IconButton(
+                  icon: const Icon(Icons.settings, color: Colors.white),
+                  onPressed: () => Scaffold.of(context).openEndDrawer(),
+                );
+              })
+          ],
           title: _currentIndex == 0
               ? Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -58,28 +67,37 @@ class _MainWrapperState extends State<MainWrapper> {
                   FutureBuilder<String?>(
                     future: TokenManager.getName(),
                     builder: (context, snapshot) {
-                      String name = snapshot.data ?? "User";
-                      return Text(name, style: GoogleFonts.tajawal(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white));
+                      String name = snapshot.data ?? "جارِ التحميل..";
+                      return Text(
+                          name,
+                          style: GoogleFonts.tajawal(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)
+                      );
                     },
                   ),
                 ],
               ),
               Container(
-                height: 40, width: 40,
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white24),
+                height: 42, width: 42,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white24, width: 1.5)
+                ),
                 child: ClipOval(
                   child: Image.asset(
                     'assets/images/logo.jpeg',
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.business, color: Colors.white),
+                    errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.business, color: Colors.white),
                   ),
                 ),
               ),
             ],
           )
-              : Text(_getPageTitle(), style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold)),
+              : Text(
+              _getPageTitle(),
+              style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)
+          ),
         ),
-
 
         body: pages[_currentIndex],
 

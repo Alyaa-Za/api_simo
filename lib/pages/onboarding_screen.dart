@@ -80,7 +80,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // ── Skip ──────────────────────────────────────
               Align(
                 alignment: Alignment.topRight,
                 child: Padding(
@@ -88,7 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: TextButton(
                     onPressed: _toLogin,
                     child: Text(
-                      'Skip',
+                      'تخطي',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -116,8 +115,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
                 child: _BigButton(
                   label: _current == _pages.length - 1
-                      ? 'Get Started'
-                      : 'Next',
+                      ? 'ابدأ'
+                      : 'التالي',
                   onTap: _next,
                 ),
               ),

@@ -5,7 +5,6 @@ import '../../../core/ui/app_color.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
-
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
@@ -14,12 +13,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  final TextEditingController _uniController = TextEditingController();
-  final TextEditingController _deptController = TextEditingController();
-  final TextEditingController _gpaController = TextEditingController();
-
-  String? _selectedCity;
-  String? _selectedLevel;
+  final _uniController = TextEditingController();
+  final _deptController = TextEditingController();
+  final _gpaController = TextEditingController();
+  String? _selectedCity, _selectedLevel;
 
   final List<String> _cities = ["صنعاء", "عدن", "تعز", "حضرموت", "إب", "الحديدة"];
   final List<String> _levels = ["Level 1", "Level 2", "Level 3", "Level 4", "Graduate"];
@@ -30,23 +27,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _loadCurrentData();
   }
 
+  // ── [الإصلاح]: جلب البيانات من المسار الصحيح (data -> student) ──
   Future<void> _loadCurrentData() async {
     setState(() => _isLoading = true);
     try {
       final response = await ApiService().getProfile();
-      final data = response['data'];
+      // الباك أند يرسل البيانات داخل ['data']['student']
+      final data = response['data']?['student'] ?? response['data'] ?? {};
+
       setState(() {
-        _uniController.text = data['university'] ?? "";
-        _deptController.text = data['department'] ?? "";
+        _uniController.text = data['university']?.toString() ?? "";
+        _deptController.text = data['department']?.toString() ?? "";
         _gpaController.text = data['gpa']?.toString() ?? "";
 
-        // 2. حل مشكلة الشاشة الحمراء (التأكد من وجود القيمة في القائمة قبل تعيينها)
+        // فحص وجود القيم في القوائم المنسدلة لمنع الـ Error
         if (_cities.contains(data['city'])) _selectedCity = data['city'];
         if (_levels.contains(data['level'])) _selectedLevel = data['level'];
 
         _isLoading = false;
       });
     } catch (e) {
+      debugPrint("Load Error: $e");
       setState(() => _isLoading = false);
     }
   }
@@ -56,19 +57,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = true);
 
     Map<String, dynamic> body = {
+      "university": _uniController.text.trim(),
       "department": _deptController.text.trim(),
       "level": _selectedLevel,
-      "gpa": double.tryParse(_gpaController.text.trim()),
+      "gpa": _gpaController.text.trim(),
       "city": _selectedCity,
-      "university": _uniController.text.trim(),
     };
 
     try {
       await ApiService().updateProfile(body);
       if (!mounted) return;
-      _showPopup("نجاح", "تم حفظ البيانات بنجاح ✅", false);
+
+      // إظهار رسالة نجاح فخمة قبل العودة
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("تم تحديث بياناتك بنجاح ✅"), backgroundColor: Colors.green)
+      );
+      Navigator.pop(context, true);
     } catch (e) {
-      _showPopup("خطأ", e.toString(), true);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("فشل الحفظ: $e")));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -76,94 +82,130 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // الرجوع لتصميمك الأصلي (App Bar الأزرق والخلفية الفاتحة)
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
-      appBar: AppBar(
-        title: Text("تعديل الملف الشخصي", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: AppColors.primaryBlue,
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // تصميمك الأصلي (البطاقات البيضاء)
-              _buildCard([
-                _buildTextField("الجامعة", Icons.school, _uniController),
-                _buildTextField("القسم", Icons.account_tree, _deptController),
-              ]),
-              const SizedBox(height: 20),
-              _buildCard([
-                _buildDropdown("المستوى", Icons.trending_up, _levels, _selectedLevel, (v) => setState(() => _selectedLevel = v)),
-                _buildDropdown("المدينة", Icons.location_city, _cities, _selectedCity, (v) => setState(() => _selectedCity = v)),
-                _buildTextField("المعدل", Icons.grade, _gpaController, isNumber: true),
-              ]),
-              const SizedBox(height: 30),
-              _buildSaveButton(),
-            ],
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF4F7FF), // خلفية فخمة
+        appBar: AppBar(
+          title: Text("تحديث الملف الأكاديمي", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
+          centerTitle: true,
+          flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppColors.splashGradient)),
+          elevation: 0,
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+          padding: const EdgeInsets.all(25),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionTitle("المؤسسة التعليمية", Icons.account_balance_rounded),
+                _buildPremiumCard([
+                  _buildField("اسم الجامعة / الكلية", Icons.school_rounded, _uniController),
+                  _buildField("القسم أو التخصص", Icons.account_tree_rounded, _deptController),
+                ]),
+
+                const SizedBox(height: 30),
+
+                _buildSectionTitle("المستوى والمعدل", Icons.auto_graph_rounded),
+                _buildPremiumCard([
+                  _buildDropdown("المستوى الدراسي الحالي", Icons.layers_rounded, _levels, _selectedLevel, (v) => setState(() => _selectedLevel = v)),
+                  _buildDropdown("مدينة الإقامة", Icons.location_city_rounded, _cities, _selectedCity, (v) => setState(() => _selectedCity = v)),
+                  _buildField("المعدل التراكمي (GPA)", Icons.grade_rounded, _gpaController, isNumber: true),
+                ]),
+
+                const SizedBox(height: 45),
+                _buildPremiumSaveButton(),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // --- دوال البناء (Widgets) بنفس ستايلك السابق ---
-  Widget _buildTextField(String label, IconData icon, TextEditingController ctrl, {bool isNumber = false}) {
-    return TextFormField(
-      controller: ctrl,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon, color: AppColors.primaryBlue)),
-    );
-  }
-
-  Widget _buildDropdown(String label, IconData icon, List<String> items, String? value, Function(String?) onChanged) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-      onChanged: onChanged,
-      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon, color: AppColors.primaryBlue)),
-    );
-  }
-
-  Widget _buildCard(List<Widget> children) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10, bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.primaryBlue),
+          const SizedBox(width: 8),
+          Text(title, style: GoogleFonts.tajawal(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+        ],
       ),
-      child: Column(children: children),
     );
   }
 
-  Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _handleSave,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryBlue,
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  Widget _buildField(String label, IconData icon, TextEditingController ctrl, {bool isNumber = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: TextFormField(
+        controller: ctrl,
+        keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+          prefixIcon: Icon(icon, color: AppColors.primaryBlue, size: 20),
+          filled: true, fillColor: const Color(0xFFF8F9FD),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1)),
         ),
-        child: const Text("حفظ التغييرات", style: TextStyle(color: Colors.white, fontSize: 16)),
+        validator: (v) => v!.isEmpty ? "هذا الحقل ضروري" : null,
       ),
     );
   }
 
-  void _showPopup(String title, String msg, bool isError) {
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text(title, style: TextStyle(color: isError ? Colors.red : Colors.green)),
-        content: Text(msg),
-        actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text("موافق"))],
+  Widget _buildDropdown(String label, IconData icon, List<String> items, String? val, Function(String?) onChanged) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: DropdownButtonFormField<String>(
+        value: val,
+        items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 14)))).toList(),
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+          prefixIcon: Icon(icon, color: AppColors.primaryBlue, size: 20),
+          filled: true, fillColor: const Color(0xFFF8F9FD),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumCard(List<Widget> children) => Container(
+    padding: const EdgeInsets.fromLTRB(20, 25, 20, 10),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(30),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20, offset: const Offset(0, 10))],
+    ),
+    child: Column(children: children),
+  );
+
+  Widget _buildPremiumSaveButton() {
+    return Container(
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: AppColors.buttonGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+      ),
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _handleSave,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        child: _isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : Text("حفظ التغييرات الأكاديمية", style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
       ),
     );
   }

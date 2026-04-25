@@ -1,110 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/ui/app_color.dart';
-import '../../widgets/bubble_background.dart';
-import '../../widgets/shared/home_app_bar.dart';
-import '../../widgets/shared/stat_card.dart';
-import '../../widgets/shared/action_card.dart';
-import '../../widgets/shared/application_card.dart';
+import '../../../core/ui/app_color.dart';
+import '../../../core/api/api_s.dart';
 
-class InstitutionHomeScreen extends StatelessWidget {
-  const InstitutionHomeScreen({super.key});
+class InstitutionDashboard extends StatefulWidget {
+  const InstitutionDashboard({super.key});
 
-  // ── Static Data ───────────────────────────────────────────────
-  static const _stats = [
-    (icon: Icons.people_outline_rounded,      label: 'Trainees',  value: '12', color: AppColors.primaryBlue),
-    (icon: Icons.inbox_outlined,              label: 'Requests',  value: '5',  color: Color(0xFFFF9500)),
-    (icon: Icons.business_center_outlined,    label: 'Positions', value: '8',  color: Color(0xFF9B59B6)),
-  ];
+  @override
+  State<InstitutionDashboard> createState() => _InstitutionDashboardState();
+}
 
-  static const _actions = [
-    (icon: Icons.post_add_rounded,      label: 'Post Position', color: AppColors.primaryBlue),
-    (icon: Icons.inbox_rounded,         label: 'View Requests', color: Color(0xFFFF9500)),
-    (icon: Icons.people_rounded,        label: 'My Trainees',   color: Color(0xFF34C759)),
-    (icon: Icons.bar_chart_rounded,     label: 'Reports',       color: Color(0xFF9B59B6)),
-  ];
-
-  static const _requests = [
-    (name: 'Ahmed Al-Rashidi', position: 'Software Engineering Intern', letter: 'A', color: AppColors.primaryBlue),
-    (name: 'Sara Al-Qahtani',  position: 'Data Analysis Intern',        letter: 'S', color: Color(0xFF9B59B6)),
-    (name: 'Omar Al-Harbi',    position: 'UI/UX Design Intern',         letter: 'O', color: Color(0xFF34C759)),
-  ];
-
+class _InstitutionDashboardState extends State<InstitutionDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BubbleBackground(
-        style: BubbleStyle.onboarding,
-        child: SafeArea(
+      backgroundColor: const Color(0xFFF8F9FD),
+      body: RefreshIndicator(
+        onRefresh: () async => setState(() {}),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── AppBar ──────────────────────────────────────
-              const HomeAppBar(
-                title: 'Institution Portal',
-                subtitle: 'Manage your training 🏢',
-                icon: Icons.business_rounded,
-              ),
-
-              // ── Scrollable Content ───────────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Stats
-                      Row(
-                        children: _stats
-                            .map((s) => StatCard(
-                          icon: s.icon,
-                          label: s.label,
-                          value: s.value,
-                          color: s.color,
-                        ))
-                            .toList(),
-                      ),
-
-                      const SizedBox(height: 24),
-                      _sectionTitle('Quick Actions'),
-                      const SizedBox(height: 14),
-
-                      // Actions Grid
-                      GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1.4,
-                        children: _actions
-                            .map((a) => ActionCard(
-                          icon: a.icon,
-                          label: a.label,
-                          color: a.color,
-                        ))
-                            .toList(),
-                      ),
-
-                      const SizedBox(height: 24),
-                      _sectionTitle('Recent Requests'),
-                      const SizedBox(height: 14),
-
-                      // Requests
-                      ..._requests.map((r) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: RequestCard(
-                          name: r.name,
-                          position: r.position,
-                          avatarLetter: r.letter,
-                          color: r.color,
-                          onAccept: () {},
-                          onReject: () {},
-                        ),
-                      )),
-                    ],
-                  ),
+              Text(
+                "لوحة التحكم الإحصائية",
+                style: GoogleFonts.tajawal(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textDark,
                 ),
               ),
+              const SizedBox(height: 20),
+
+              FutureBuilder<Map<String, dynamic>>(
+                future: ApiService().getInstitutionDashboardStats(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final stats = snapshot.data?['data'] ?? {};
+
+                  return GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 15,
+                    crossAxisSpacing: 15,
+                    childAspectRatio: 1.1,
+                    children: [
+                      _buildStatCard("إجمالي الفرص", stats['total_opportunities']?.toString() ?? "0", Icons.business_center_outlined, Colors.blue),
+                      _buildStatCard("المتدربون النشطون", stats['active_interns']?.toString() ?? "0", Icons.people_outline, Colors.teal),
+                      _buildStatCard("طلبات المراجعة", stats['pending_requests_count']?.toString() ?? "0", Icons.hourglass_empty_rounded, Colors.orange),
+                      _buildStatCard("البلاغات المفتوحة", "0", Icons.report_problem_outlined, Colors.redAccent),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: 25),
+
+              _buildOverviewBox(),
+
+              const SizedBox(height: 25),
+
+              _buildQuickAction(context),
             ],
           ),
         ),
@@ -112,13 +73,88 @@ class InstitutionHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.inter(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textDark,
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(color: color.withOpacity(0.06), blurRadius: 15, offset: const Offset(0, 8))
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.tajawal(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverviewBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.analytics_outlined, color: AppColors.primaryBlue, size: 20),
+              const SizedBox(width: 10),
+              Text("نظرة عامة على النظام", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          const Divider(height: 30),
+          Text(
+            "مرحباً بك في لوحة تحكم المؤسسة، يمكنك البدء بمراجعة الطلبات المعلقة أو إضافة فرص تدريبية جديدة من خلال التبويبات بالأسفل. النظام يساعدك على متابعة المتدربين بفعالية.",
+            style: GoogleFonts.tajawal(fontSize: 13, color: Colors.black54, height: 1.8),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        gradient: AppColors.buttonGradient.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primaryBlue.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, color: AppColors.primaryBlue, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "لديك طلبات جديدة بانتظار قرارك، توجه لتبويب الطلبات.",
+              style: GoogleFonts.tajawal(fontSize: 12, color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

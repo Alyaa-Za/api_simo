@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api/api_s.dart';
 import '../../../core/ui/app_color.dart';
 import 'reports_screen.dart';
-import 'attendance_screen.dart';
+// تم حذف استيراد الحضور بناءً على طلبك
 import '../evaluation/evaluation_screen.dart';
 
 class InternshipScreen extends StatefulWidget {
@@ -14,6 +14,7 @@ class InternshipScreen extends StatefulWidget {
 }
 
 class _InternshipScreenState extends State<InternshipScreen> {
+  // جلب بيانات التدريب (دالة رقم 13 في الباك أند)
   Future<Map<String, dynamic>> _fetchInternshipData() async {
     final response = await ApiService().getMyInternship();
     return response['data'];
@@ -21,94 +22,150 @@ class _InternshipScreenState extends State<InternshipScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _fetchInternshipData(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || snapshot.data == null) {
-            return _buildNoInternship();
-          }
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF4F7FF), // خلفية ملكية باردة
+        body: FutureBuilder<Map<String, dynamic>>(
+          future: _fetchInternshipData(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return _buildNoInternship();
+            }
 
-          final data = snapshot.data!;
+            final data = snapshot.data!;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                _buildHeaderCard(
-                  data['opportunity']?['title'] ?? "تدريب ميداني",
-                  data['mentor_name'] ?? "لم يحدد مشرف بعد",
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // 1. [Header الفخم]: البطاقة التعريفية للتدريب
+                SliverToBoxAdapter(
+                  child: _buildPremiumHeader(
+                    data['opportunity']?['title'] ?? "برنامج التدريب الميداني",
+                    data['mentor_name'] ?? "المشرف الأكاديمي",
+                    data['institution']?['name'] ?? "الجهة المدربة",
+                  ),
                 ),
 
-                const SizedBox(height: 30),
-
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 15,
-                  crossAxisSpacing: 15,
-                  children: [
-                    _buildMenuCard(context, "رفع التقارير", Icons.description_outlined, Colors.blue,
-                        const ReportsScreen()),
-                    _buildMenuCard(context, "سجل التحضير", Icons.fact_check_outlined, Colors.teal,
-                        const AttendanceScreen()),
-                    _buildMenuCard(context, "تقييم الأداء", Icons.star_outline_rounded, Colors.orange,
-                        const EvaluationScreen()),
-                    _buildMenuCard(context, "تفاصيل المهام", Icons.info_outline, Colors.purple,
-                        null, isDetail: true, taskData: data),
-                  ],
+                // 2. [قسم الخيارات]: شبكة الأزرار الفخمة
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 30, 20, 100),
+                  sliver: SliverGrid.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 20,
+                    crossAxisSpacing: 20,
+                    childAspectRatio: 1.1, // لجعل الكروت مربعة بلمسة فخمة
+                    children: [
+                      _buildOptionCard(
+                        context,
+                        "التقارير اليومية",
+                        "رفع ومتابعة الإنجاز",
+                        Icons.edit_note_rounded,
+                        const Color(0xFF6366F1), // Indigo
+                        const ReportsScreen(),
+                      ),
+                      _buildOptionCard(
+                        context,
+                        "تقييم الأداء",
+                        "النتيجة والملاحظات",
+                        Icons.auto_graph_rounded,
+                        const Color(0xFFF59E0B), // Amber
+                        const EvaluationScreen(),
+                      ),
+                      _buildOptionCard(
+                        context,
+                        "المهام الموكلة",
+                        "قائمة المتطلبات",
+                        Icons.task_alt_rounded,
+                        const Color(0xFF10B981), // Emerald
+                        null,
+                        isDetail: true,
+                        taskData: data,
+                      ),
+                      _buildOptionCard(
+                        context,
+                        "الخطة الزمنية",
+                        "مواعيد البداية والنهاية",
+                        Icons.calendar_today_rounded,
+                        const Color(0xFF3B82F6), // Blue
+                        null,
+                        isTimeline: true,
+                        taskData: data,
+                      ),
+                    ],
+                  ),
                 ),
               ],
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildHeaderCard(String title, String mentor) {
+  Widget _buildPremiumHeader(String title, String mentor, String company) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(25),
-      decoration: BoxDecoration(
-        gradient: AppColors.buttonGradient,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 15)],
+      padding: const EdgeInsets.fromLTRB(30, 80, 30, 40),
+      decoration: const BoxDecoration(
+        gradient: AppColors.splashGradient,
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(50), bottomRight: Radius.circular(50)),
       ),
       child: Column(
         children: [
-          const Icon(Icons.workspace_premium, color: Colors.white, size: 50),
+          Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+            child: const Icon(Icons.stars_rounded, color: Colors.white, size: 45),
+          ),
+          const SizedBox(height: 20),
+          Text(title, textAlign: TextAlign.center, style: GoogleFonts.tajawal(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Text(company, style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500)),
           const SizedBox(height: 15),
-          Text(title, textAlign: TextAlign.center, style: GoogleFonts.tajawal(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 5),
-          Text("المشرف: $mentor", style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
+            decoration: BoxDecoration(color: Colors.black.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+            child: Text("المشرف المباشر: $mentor", style: const TextStyle(color: Colors.white, fontSize: 12)),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMenuCard(BuildContext context, String title, IconData icon, Color color, Widget? destination, {bool isDetail = false, Map? taskData}) {
+  Widget _buildOptionCard(BuildContext context, String title, String subtitle, IconData icon, Color color, Widget? destination, {bool isDetail = false, bool isTimeline = false, Map? taskData}) {
     return InkWell(
       onTap: () {
         if (isDetail) {
           _showTaskDetails(context, taskData!);
+        } else if (isTimeline) {
+          _showTimelineDetails(context, taskData!);
         } else if (destination != null) {
           Navigator.push(context, MaterialPageRoute(builder: (c) => destination));
         }
       },
       child: Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10))],
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 35),
-            const SizedBox(height: 10),
-            Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 13)),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const Spacer(),
+            Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 4),
+            Text(subtitle, style: const TextStyle(fontSize: 10, color: Colors.grey)),
           ],
         ),
       ),
@@ -116,28 +173,44 @@ class _InternshipScreenState extends State<InternshipScreen> {
   }
 
   void _showTaskDetails(BuildContext context, Map data) {
+    _showCustomSheet(context, "المهام المطلوبة", data['assigned_tasks'] ?? "سيقوم المشرف بإضافة المهام قريباً.");
+  }
+
+  void _showTimelineDetails(BuildContext context, Map data) {
+    _showCustomSheet(context, "الجدول الزمني", "البداية: ${data['actual_start_date']}\nالنهاية: ${data['actual_end_date'] ?? 'مستمر حالياً'}");
+  }
+
+  void _showCustomSheet(BuildContext context, String title, String content) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-      builder: (c) => Padding(
-        padding: const EdgeInsets.all(25),
+      backgroundColor: Colors.transparent,
+      builder: (c) => Container(
+        padding: const EdgeInsets.all(30),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(40))),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("المهام الموكلة إليك", style: GoogleFonts.tajawal(fontSize: 18, fontWeight: FontWeight.bold)),
-            const Divider(),
-            const SizedBox(height: 10),
-            Text(data['assigned_tasks'] ?? "لم يتم إسناد مهام محددة بعد.", style: const TextStyle(height: 1.5)),
+            Center(child: Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+            const SizedBox(height: 25),
+            Text(title, style: GoogleFonts.tajawal(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
             const SizedBox(height: 20),
-            Text("فترة التدريب:", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
-            Text("${data['actual_start_date']} إلى ${data['actual_end_date'] ?? 'الآن'}"),
-            const SizedBox(height: 20),
+            Text(content, style: const TextStyle(height: 1.8, fontSize: 14, color: Colors.black87)),
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNoInternship() => Center(child: Text("لا يوجد تدريب نشط حالياً", style: GoogleFonts.tajawal(color: Colors.grey)));
+  Widget _buildNoInternship() => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.work_off_outlined, size: 80, color: Colors.grey.shade300),
+        const SizedBox(height: 20),
+        Text("لا يوجد تدريب مفعل حالياً", style: GoogleFonts.tajawal(color: Colors.grey, fontWeight: FontWeight.bold)),
+      ],
+    ),
+  );
 }

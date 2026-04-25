@@ -1,194 +1,191 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/api/api_s.dart';
-import '../core/ui/app_color.dart';
-import '../core/token_manager.dart';
+import '../../../core/ui/app_color.dart';
+import '../../../core/api/api_s.dart';
+import '../../../core/token_manager.dart';
 import '../pages/login_screen.dart';
-import '../pages/student/settings/notification.dart';
-import '../pages/student/settings/support_screen.dart';
+import '../pages/student/settings/PrivacyPolicyScreen.dart';
+import '../pages/student/settings/complaints_screen.dart';
 
-class SettingsSideBar extends StatelessWidget {
-  const SettingsSideBar({super.key});
+class StudentSettingsSideBar extends StatefulWidget {
+  const StudentSettingsSideBar({super.key});
+
+  @override
+  State<StudentSettingsSideBar> createState() => _StudentSettingsSideBarState();
+}
+
+class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
+  bool _isObscureOld = true;
+  bool _isObscureNew = true;
+  bool _isObscureConfirm = true;
 
   @override
   Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: Colors.white,
-      child: Column(
-        children: [
-          const SizedBox(height: 80),
-
-          _drawerItem(
-            context,
-            icon: Icons.notifications_active_outlined,
-            title: "الإشعارات",
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (c) => const NotificationsScreen()));
-            },
-          ),
-
-          _drawerItem(
-            context,
-            icon: Icons.support_agent_outlined,
-            title: "مركز الدعم والشكاوى",
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (c) => const SupportCenterScreen()));
-            },
-          ),
-
-          _drawerItem(
-            context,
-            icon: Icons.lock_reset_rounded,
-            title: "تغيير كلمة المرور",
-            onTap: () {
-              Navigator.pop(context);
-              _showChangePasswordSheet(context);
-            },
-          ),
-
-          const Spacer(),
-          const Divider(indent: 20, endIndent: 20),
-
-          _drawerItem(
-            context,
-            icon: Icons.logout_rounded,
-            title: "تسجيل الخروج",
-            color: Colors.redAccent,
-            onTap: () => _handleLogout(context),
-          ),
-          const SizedBox(height: 30),
-        ],
-      ),
-    );
-  }
-
-  // ── نافذة تغيير كلمة المرور (المنطق الحقيقي) ──
-  void _showChangePasswordSheet(BuildContext context) {
-    final currentPassCtrl = TextEditingController();
-    final newPassCtrl = TextEditingController();
-    final confirmPassCtrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-      builder: (c) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom, left: 25, right: 25, top: 25),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Drawer(
+        width: MediaQuery.of(context).size.width * 0.85,
+        backgroundColor: Colors.white,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+            _buildPremiumHeader(),
+
             const SizedBox(height: 20),
-            Text("تغيير كلمة المرور", style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 25),
 
-            _buildPassField("كلمة المرور الحالية", currentPassCtrl),
-            const SizedBox(height: 15),
-            _buildPassField("كلمة المرور الجديدة", newPassCtrl),
-            const SizedBox(height: 15),
-            _buildPassField("تأكيد كلمة المرور الجديدة", confirmPassCtrl),
+            _buildMenuTile(Icons.lock_reset_rounded, "تغيير كلمة المرور", () => _showChangePasswordModal(context)),
 
-            const SizedBox(height: 30),
+            _buildMenuTile(Icons.support_agent_rounded, "مركز الدعم والبلاغات", () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (c) => const ComplaintsScreen()));
+            }),
 
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                ),
-                onPressed: () async {
-                  // 1. فحص تطابق الرموز الجديدة
-                  if (newPassCtrl.text != confirmPassCtrl.text) {
-                    _showStatusPopup(context, "خطأ", "كلمات المرور الجديدة غير متطابقة", isError: true);
-                    return;
-                  }
+            _buildMenuTile(Icons.privacy_tip_outlined, "سياسة الخصوصية والأمان", () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (c) => const PrivacyPolicyScreen()));
+            }),
 
-                  try {
-                    // 2. استدعاء الـ API الحقيقي
-                    await ApiService().changePassword(
-                      currentPassCtrl.text,
-                      newPassCtrl.text,
-                      confirmPassCtrl.text,
-                    );
+            const Spacer(),
 
-                    if (!context.mounted) return;
-                    Navigator.pop(c); // إغلاق النافذة
-                    _showStatusPopup(context, "تم بنجاح", "تم تحديث كلمة المرور بنجاح ✅", isError: false);
-
-                  } catch (e) {
-                    // 3. الخطأ (مثل الرمز القديم غلط)
-                    _showStatusPopup(context, "فشل التحديث", "الرمز الحالي غير صحيح أو حدث خطأ في النظام", isError: true);
-                  }
-                },
-                child: Text("تحديث الآن", style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-            const SizedBox(height: 30),
+            _buildLogoutButton(context),
           ],
         ),
       ),
     );
   }
 
-  // ── ويدجت الرسائل المنبثقة (Dialogs) ──
-  void _showStatusPopup(BuildContext context, String title, String msg, {required bool isError}) {
+  Widget _buildPremiumHeader() => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.fromLTRB(20, 70, 20, 40),
+    decoration: const BoxDecoration(
+      gradient: AppColors.splashGradient,
+      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(50)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const CircleAvatar(
+            radius: 35,
+            backgroundColor: Colors.white24,
+            child: Icon(Icons.settings_suggest_outlined, color: Colors.white, size: 35)
+        ),
+        const SizedBox(height: 15),
+        Text("إعدادات الحساب", style: GoogleFonts.tajawal(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+        Text("تحكم في خصوصية وأمان ملفك الأكاديمي", style: GoogleFonts.tajawal(color: Colors.white70, fontSize: 12)),
+      ],
+    ),
+  );
+
+  Widget _buildMenuTile(IconData icon, String title, VoidCallback onTap) => ListTile(
+    onTap: onTap,
+    leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(color: AppColors.primaryBlue.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
+        child: Icon(icon, color: AppColors.primaryBlue, size: 22)
+    ),
+    title: Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.w600, fontSize: 15)),
+    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 25, vertical: 5),
+  );
+
+  Widget _buildLogoutButton(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(25, 10, 25, 40),
+    child: ElevatedButton.icon(
+      onPressed: () => _showHugeLogoutWarning(context),
+      icon: const Icon(Icons.logout_rounded, color: Colors.white),
+      label: Text("تسجيل الخروج", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
+      style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.redAccent,
+          minimumSize: const Size(double.infinity, 60),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))
+      ),
+    ),
+  );
+
+  void _showHugeLogoutWarning(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, color: isError ? Colors.red : Colors.green)),
-        content: Text(msg, style: GoogleFonts.tajawal()),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("موافق"))],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(35)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 15),
+            Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(Icons.warning_rounded, color: Colors.red, size: 70)
+            ),
+            const SizedBox(height: 25),
+            Text("تنبيه أمان!", style: GoogleFonts.tajawal(fontWeight: FontWeight.w900, fontSize: 22, color: Colors.red)),
+            const SizedBox(height: 10),
+            const Text("هل أنت متأكد من رغبتك في تسجيل الخروج؟", textAlign: TextAlign.center),
+            const SizedBox(height: 35),
+            Row(children: [
+              Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), child: const Text("إلغاء"))),
+              const SizedBox(width: 15),
+              Expanded(child: ElevatedButton(onPressed: () async {
+                await TokenManager.clearToken();
+                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (c) => const LoginScreen()), (r) => false);
+              }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), child: const Text("خروج", style: TextStyle(color: Colors.white)))),
+            ]),
+          ],
+        ),
       ),
     );
   }
 
-  // ── تسجيل الخروج ──
-  Future<void> _handleLogout(BuildContext context) async {
-    bool? confirm = await showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text("تنبيه", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
-        content: const Text("هل أنت متأكد من تسجيل الخروج؟"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text("إلغاء")),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text("نعم، خروج", style: TextStyle(color: Colors.red))),
-        ],
+  void _showChangePasswordModal(BuildContext context) {
+    final oldP = TextEditingController();
+    final newP = TextEditingController();
+    final confirmP = TextEditingController();
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (c) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom, left: 25, right: 25, top: 20),
+          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(40))),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
+              const SizedBox(height: 25),
+              Text("تحديث كلمة المرور", style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 30),
+              _buildPasswordField("كلمة المرور الحالية", oldP, _isObscureOld, () => setModalState(() => _isObscureOld = !_isObscureOld)),
+              _buildPasswordField("كلمة المرور الجديدة", newP, _isObscureNew, () => setModalState(() => _isObscureNew = !_isObscureNew)),
+              _buildPasswordField("تأكيد الكلمة الجديدة", confirmP, _isObscureConfirm, () => setModalState(() => _isObscureConfirm = !_isObscureConfirm)),
+              const SizedBox(height: 35),
+              SizedBox(
+                width: double.infinity, height: 60,
+                child: ElevatedButton(
+                    onPressed: () async {
+                      if (newP.text != confirmP.text) { /* تنبيه */ return; }
+                      await ApiService().changePassword(oldP.text, newP.text, confirmP.text);
+                      Navigator.pop(c);
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, shape: const StadiumBorder()),
+                    child: const Text("تحديث الآن", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                ),
+              ),
+              const SizedBox(height: 35),
+            ],
+          ),
+        ),
       ),
     );
-
-    if (confirm == true) {
-      try { await ApiService().logout(); } finally {
-        await TokenManager.clearToken();
-        if (context.mounted) {
-          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (c) => const LoginScreen()), (route) => false);
-        }
-      }
-    }
   }
 
-  Widget _drawerItem(BuildContext context, {required IconData icon, required String title, required VoidCallback onTap, Color? color}) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 25),
-      leading: Icon(icon, color: color ?? AppColors.primaryBlue, size: 24),
-      title: Text(title, style: GoogleFonts.tajawal(fontSize: 15, fontWeight: FontWeight.w600, color: color ?? AppColors.textDark)),
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildPassField(String label, TextEditingController ctrl) {
-    return TextField(
-      controller: ctrl,
-      obscureText: true,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: const Icon(Icons.lock_outline, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+  Widget _buildPasswordField(String label, TextEditingController ctrl, bool obscure, VoidCallback onToggle) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: TextField(
+        controller: ctrl, obscureText: obscure,
+        decoration: InputDecoration(
+          labelText: label, prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primaryBlue),
+          suffixIcon: IconButton(icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, color: Colors.grey), onPressed: onToggle),
+          filled: true, fillColor: const Color(0xFFF8F9FD),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        ),
       ),
     );
   }
