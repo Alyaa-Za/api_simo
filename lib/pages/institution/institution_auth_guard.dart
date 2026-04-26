@@ -86,7 +86,7 @@ class _InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
                 child: Material(
                   color: Colors.white,
                   elevation: 20,
-                  child: const InstitutionSettingsSideBar(),
+                  child: const InstitutionSettings(),
                 ),
               ),
             ),
@@ -127,7 +127,7 @@ class _InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
                 ),
                 child: ClipOval(
                   child: Image.asset(
-                    'assets/images/logo.jpeg',
+                    'assets/images/logo.png',
                     fit: BoxFit.cover,
                   ),
                 ),

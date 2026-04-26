@@ -22,7 +22,12 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FD),
         appBar: AppBar(
-          title: Text("مركز البلاغات والدعم", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
+          // ── إضافة زر الرجوع هنا ──
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text("مركز البلاغات والدعم", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
           centerTitle: true,
           elevation: 0,
           flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppColors.splashGradient)),
@@ -103,7 +108,7 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
       builder: (c) => Directionality(
         textDirection: TextDirection.rtl,
         child: Container(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom, left: 25, right: 25, top: 20),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom + 30, left: 25, right: 25, top: 20),
           decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(40))),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -139,17 +144,17 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
     if (_titleCtrl.text.isEmpty || _descCtrl.text.isEmpty) return;
     setState(() => _isSending = true);
     try {
-      await ApiService().createInstitutionComplaint(_titleCtrl.text, _descCtrl.text); // الدالة 18
+      await ApiService().createInstitutionComplaint(_titleCtrl.text, _descCtrl.text);
       if (mounted) {
         Navigator.pop(context);
         _titleCtrl.clear(); _descCtrl.clear();
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم إرسال بلاغك بنجاح ✅")));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم إرسال بلاغك بنجاح ✅"), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("فشل الإرسال: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("فشل الإرسال: $e"), backgroundColor: Colors.redAccent));
     } finally {
-      setState(() => _isSending = false);
+      if (mounted) setState(() => _isSending = false);
     }
   }
 

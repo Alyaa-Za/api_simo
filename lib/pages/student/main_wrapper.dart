@@ -84,7 +84,7 @@ class _MainWrapperState extends State<MainWrapper> {
                 ),
                 child: ClipOval(
                   child: Image.asset(
-                    'assets/images/logo.jpeg',
+                    'assets/images/logo.png',
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) =>
                     const Icon(Icons.business, color: Colors.white),

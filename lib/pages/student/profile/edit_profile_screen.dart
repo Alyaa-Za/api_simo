@@ -13,42 +13,60 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  final _uniController = TextEditingController();
-  final _deptController = TextEditingController();
+  // المتحكمات
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _bioController = TextEditingController();
+  final _skillsController = TextEditingController();
   final _gpaController = TextEditingController();
-  String? _selectedCity, _selectedLevel;
+  final _uniController = TextEditingController();
+
+  String? _selectedCity, _selectedLevel, _selectedCollege, _selectedDept;
 
   final List<String> _cities = ["صنعاء", "عدن", "تعز", "حضرموت", "إب", "الحديدة"];
   final List<String> _levels = ["Level 1", "Level 2", "Level 3", "Level 4", "Graduate"];
+  final List<String> _colleges = ["كلية الهندسة", "كلية الحاسوب", "كلية العلوم الإدارية", "كلية اللغات"];
+  final List<String> _departments = ["تقنية معلومات", "علوم حاسوب", "هندسة برمجيات", "نظم معلومات"];
 
   @override
   void initState() {
     super.initState();
-    _loadCurrentData();
+    _loadCurrentData(); // جلب البيانات عند فتح الصفحة لكي لا تكون الحقول فارغة
   }
 
-  // ── [الإصلاح]: جلب البيانات من المسار الصحيح (data -> student) ──
+  // ── دالة جلب البيانات وتثبيتها في الحقول ──
   Future<void> _loadCurrentData() async {
     setState(() => _isLoading = true);
     try {
       final response = await ApiService().getProfile();
-      // الباك أند يرسل البيانات داخل ['data']['student']
-      final data = response['data']?['student'] ?? response['data'] ?? {};
+      final data = response['data'] ?? {}; // الباك أند عندك يرسل البيانات مباشرة في data
 
       setState(() {
+        _nameController.text = data['full_name']?.toString() ?? "";
+        _phoneController.text = data['phone']?.toString() ?? "";
+        _bioController.text = data['bio']?.toString() ?? "";
+
+        // معالجة المهارات (قائمة أو نص)
+        if (data['skills'] is List) {
+          _skillsController.text = (data['skills'] as List).join(', ');
+        } else {
+          _skillsController.text = data['skills']?.toString() ?? "";
+        }
+
         _uniController.text = data['university']?.toString() ?? "";
-        _deptController.text = data['department']?.toString() ?? "";
         _gpaController.text = data['gpa']?.toString() ?? "";
 
-        // فحص وجود القيم في القوائم المنسدلة لمنع الـ Error
+        // تثبيت قيم القوائم المنسدلة
         if (_cities.contains(data['city'])) _selectedCity = data['city'];
         if (_levels.contains(data['level'])) _selectedLevel = data['level'];
+        if (_colleges.contains(data['college'])) _selectedCollege = data['college'];
+        if (_departments.contains(data['department'])) _selectedDept = data['department'];
 
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint("Load Error: $e");
       setState(() => _isLoading = false);
+      debugPrint("خطأ في تحميل البيانات: $e");
     }
   }
 
@@ -56,9 +74,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
+    List<String> skillsArray = _skillsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+
     Map<String, dynamic> body = {
+      "full_name": _nameController.text.trim(),
+      "phone": _phoneController.text.trim(),
+      "bio": _bioController.text.trim(),
+      "skills": skillsArray,
       "university": _uniController.text.trim(),
-      "department": _deptController.text.trim(),
+      "college": _selectedCollege,
+      "department": _selectedDept,
       "level": _selectedLevel,
       "gpa": _gpaController.text.trim(),
       "city": _selectedCity,
@@ -66,13 +91,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     try {
       await ApiService().updateProfile(body);
-      if (!mounted) return;
 
-      // إظهار رسالة نجاح فخمة قبل العودة
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("تم تحديث بياناتك بنجاح ✅"), backgroundColor: Colors.green)
-      );
-      Navigator.pop(context, true);
+      // 🔥 [أهم خطوة]: بعد الحفظ بنجاح، لا نغلق الصفحة فوراً بل نعيد الجلب لتثبيت البيانات
+      await _loadCurrentData();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم حفظ البيانات بنجاح وتثبيتها ✅"), backgroundColor: Colors.green));
+
+      // ننتظر ثانية ليرى المستخدم النجاح ثم نعود
+      Future.delayed(const Duration(seconds: 1), () {
+        Navigator.pop(context, true);
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("فشل الحفظ: $e")));
     } finally {
@@ -85,9 +114,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F7FF), // خلفية فخمة
+        backgroundColor: const Color(0xFFF4F7FF),
         appBar: AppBar(
-          title: Text("تحديث الملف الأكاديمي", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
+          title: Text("تعديل ملفك الشخصي", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
           centerTitle: true,
           flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppColors.splashGradient)),
           elevation: 0,
@@ -99,25 +128,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionTitle("المؤسسة التعليمية", Icons.account_balance_rounded),
+                _buildSectionHeader("البيانات الأساسية", Icons.person_rounded),
                 _buildPremiumCard([
-                  _buildField("اسم الجامعة / الكلية", Icons.school_rounded, _uniController),
-                  _buildField("القسم أو التخصص", Icons.account_tree_rounded, _deptController),
+                  _buildFancyField("الاسم بالكامل", Icons.badge_outlined, _nameController),
+                  _buildFancyField("رقم الهاتف", Icons.phone_android_rounded, _phoneController, isNumber: true),
+                  _buildFancyField("المهارات (فاصلة بين كل مهارة)", Icons.auto_awesome_outlined, _skillsController),
+                  _buildFancyField("نبذة تعريفية", Icons.info_outline, _bioController, maxLines: 3),
                 ]),
-
                 const SizedBox(height: 30),
-
-                _buildSectionTitle("المستوى والمعدل", Icons.auto_graph_rounded),
+                _buildSectionHeader("البيانات الأكاديمية", Icons.school_rounded),
                 _buildPremiumCard([
-                  _buildDropdown("المستوى الدراسي الحالي", Icons.layers_rounded, _levels, _selectedLevel, (v) => setState(() => _selectedLevel = v)),
-                  _buildDropdown("مدينة الإقامة", Icons.location_city_rounded, _cities, _selectedCity, (v) => setState(() => _selectedCity = v)),
-                  _buildField("المعدل التراكمي (GPA)", Icons.grade_rounded, _gpaController, isNumber: true),
+                  _buildFancyField("الجامعة", Icons.account_balance_rounded, _uniController),
+                  _buildFancyDropdown("الكلية", Icons.account_balance_outlined, _colleges, _selectedCollege, (v) => setState(() => _selectedCollege = v)),
+                  _buildFancyDropdown("القسم", Icons.account_tree_outlined, _departments, _selectedDept, (v) => setState(() => _selectedDept = v)),
+                  _buildFancyDropdown("المستوى", Icons.layers_outlined, _levels, _selectedLevel, (v) => setState(() => _selectedLevel = v)),
+                  _buildFancyField("المعدل (GPA)", Icons.stars_rounded, _gpaController, isNumber: true),
+                  _buildFancyDropdown("المدينة", Icons.location_city_rounded, _cities, _selectedCity, (v) => setState(() => _selectedCity = v)),
                 ]),
-
-                const SizedBox(height: 45),
-                _buildPremiumSaveButton(),
+                const SizedBox(height: 50),
+                _buildLuxurySaveButton(),
+                const SizedBox(height: 50),
               ],
             ),
           ),
@@ -126,86 +157,71 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon) {
+  // --- دوال بناء الـ UI (نفس الفخامة السابقة) ---
+  Widget _buildSectionHeader(String title, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.only(right: 10, bottom: 12),
+      padding: const EdgeInsets.only(right: 10, bottom: 15),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: AppColors.primaryBlue),
-          const SizedBox(width: 8),
-          Text(title, style: GoogleFonts.tajawal(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+          Icon(icon, size: 20, color: AppColors.primaryBlue),
+          const SizedBox(width: 12),
+          Text(title, style: GoogleFonts.tajawal(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textDark)),
         ],
       ),
     );
   }
 
-  Widget _buildField(String label, IconData icon, TextEditingController ctrl, {bool isNumber = false}) {
+  Widget _buildFancyField(String label, IconData icon, TextEditingController ctrl, {bool isNumber = false, int maxLines = 1}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.only(bottom: 20),
       child: TextFormField(
         controller: ctrl,
-        keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        maxLines: maxLines,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey, fontSize: 12),
-          prefixIcon: Icon(icon, color: AppColors.primaryBlue, size: 20),
-          filled: true, fillColor: const Color(0xFFF8F9FD),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1)),
+          prefixIcon: Icon(icon, color: AppColors.primaryBlue),
+          filled: true, fillColor: const Color(0xFFF9FBFF),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
         ),
-        validator: (v) => v!.isEmpty ? "هذا الحقل ضروري" : null,
+        validator: (v) => v!.isEmpty ? "مطلوب" : null,
       ),
     );
   }
 
-  Widget _buildDropdown(String label, IconData icon, List<String> items, String? val, Function(String?) onChanged) {
+  Widget _buildFancyDropdown(String label, IconData icon, List<String> items, String? val, Function(String?) onChanged) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.only(bottom: 20),
       child: DropdownButtonFormField<String>(
         value: val,
-        items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 14)))).toList(),
+        items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
         onChanged: onChanged,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey, fontSize: 12),
-          prefixIcon: Icon(icon, color: AppColors.primaryBlue, size: 20),
-          filled: true, fillColor: const Color(0xFFF8F9FD),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+          prefixIcon: Icon(icon, color: AppColors.primaryBlue),
+          filled: true, fillColor: const Color(0xFFF9FBFF),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
         ),
       ),
     );
   }
 
-  Widget _buildPremiumCard(List<Widget> children) => Container(
-    padding: const EdgeInsets.fromLTRB(20, 25, 20, 10),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(30),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20, offset: const Offset(0, 10))],
-    ),
-    child: Column(children: children),
-  );
-
-  Widget _buildPremiumSaveButton() {
+  Widget _buildPremiumCard(List<Widget> children) {
     return Container(
+      padding: const EdgeInsets.all(25),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20)]),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildLuxurySaveButton() {
+    return SizedBox(
       width: double.infinity,
       height: 60,
-      decoration: BoxDecoration(
-        gradient: AppColors.buttonGradient,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
-      ),
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleSave,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        ),
-        child: _isLoading
-            ? const CircularProgressIndicator(color: Colors.white)
-            : Text("حفظ التغييرات الأكاديمية", style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+        child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("حفظ التعديلات النهائية ✨", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

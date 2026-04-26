@@ -1,85 +1,167 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../../../core/api/api_s.dart';
 import '../../../core/ui/app_color.dart';
 
 class ComplaintsScreen extends StatefulWidget {
   const ComplaintsScreen({super.key});
+
   @override
   State<ComplaintsScreen> createState() => _ComplaintsScreenState();
 }
 
 class _ComplaintsScreenState extends State<ComplaintsScreen> {
-  String? _subject;
+  final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
-  final List<String> _subjects = ["تأخر الرد", "مشكلة تقنية", "سلوك المؤسسة", "أخرى"];
+  bool _isSending = false;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("الدعم الفني والشكاوى"), backgroundColor: Colors.white, elevation: 0),
-      body: FutureBuilder<List<dynamic>>(
-        future: ApiService().getComplaints(), // [استدعاء]: جلب شكاواك السابقة
-        builder: (context, snapshot) {
-          final list = snapshot.data ?? [];
-          return Column(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF4F7FF),
+          appBar: AppBar(
+            title: Text("مركز الدعم والبلاغات",
+                style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
+            centerTitle: true,
+            flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppColors.splashGradient)),
+            bottom: TabBar(
+              indicatorColor: Colors.white,
+              indicatorWeight: 4,
+              labelStyle: GoogleFonts.tajawal(fontWeight: FontWeight.bold),
+              tabs: const [
+                Tab(text: "تقديم بلاغ", icon: Icon(Icons.edit_notifications_outlined)),
+                Tab(text: "بلاغاتي السابقة", icon: Icon(Icons.history_rounded)),
+              ],
+            ),
+          ),
+          body: TabBarView(
             children: [
-              _buildTopBanner(),
-              Expanded(
-                child: list.isEmpty
-                    ? const Center(child: Text("لم تقدم أي شكاوى بعد"))
-                    : ListView.builder(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: list.length,
-                  itemBuilder: (c, i) => _complaintCard(list[i]),
-                ),
-              ),
-              _buildFloatingAddButton(),
+              _buildNewComplaintTab(),
+              _buildMyComplaintsTab(),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildTopBanner() => Container(
-    margin: const EdgeInsets.all(20), padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(gradient: AppColors.buttonGradient, borderRadius: BorderRadius.circular(20)),
-    child: Row(children: [const Icon(Icons.help_center, color: Colors.white, size: 40), const SizedBox(width: 15), const Expanded(child: Text("نحن هنا لمساعدتك، لا تتردد في طرح مشكلتك", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))]),
+  Widget _buildNewComplaintTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(25),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoNote(),
+          const SizedBox(height: 30),
+          Container(
+            padding: const EdgeInsets.all(25),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(35),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20)],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _label("عنوان الموضوع"),
+                _buildField(_titleCtrl, "ما هي المشكلة باختصار؟", Icons.title_rounded),
+                const SizedBox(height: 20),
+                _label("تفاصيل البلاغ"),
+                _buildField(_descCtrl, "اشرح المشكلة بالتفصيل لمساعدتنا في حلها...", Icons.description_outlined, maxLines: 5),
+                const SizedBox(height: 40),
+                _buildSubmitButton(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyComplaintsTab() {
+    return FutureBuilder<List<dynamic>>(
+      future: ApiService().getComplaints(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData || snapshot.data!.isEmpty) return _buildEmptyState();
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(20),
+          itemCount: snapshot.data!.length,
+          itemBuilder: (context, index) => _buildComplaintCard(snapshot.data![index]),
+        );
+      },
+    );
+  }
+
+  Widget _buildComplaintCard(dynamic data) {
+    String status = data['status'] ?? 'pending';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(15),
+        leading: CircleAvatar(
+          backgroundColor: _getStatusColor(status).withOpacity(0.1),
+          child: Icon(Icons.info_outline_rounded, color: _getStatusColor(status)),
+        ),
+        title: Text(data['title'] ?? "", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
+        subtitle: Text(data['description'] ?? "", maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(color: _getStatusColor(status).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+          child: Text(_getStatusText(status), style: TextStyle(color: _getStatusColor(status), fontSize: 10, fontWeight: FontWeight.bold)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoNote() => Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(color: Colors.orange.withOpacity(0.05), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.orange.withOpacity(0.1))),
+    child: const Row(children: [Icon(Icons.tips_and_updates_outlined, color: Colors.orange), SizedBox(width: 10), Expanded(child: Text("سيتم مراجعة بلاغك من قبل إدارة النظام والرد عليك خلال 24 ساعة.", style: TextStyle(fontSize: 12, color: Colors.orange)))]),
   );
 
-  Widget _buildFloatingAddButton() => Padding(
-    padding: const EdgeInsets.all(20),
-    child: ElevatedButton.icon(
-      onPressed: () => _showAddDialog(),
-      icon: const Icon(Icons.add), label: const Text("تقديم شكوى جديدة"),
-      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 55), shape: const StadiumBorder()),
+  Widget _buildField(TextEditingController ctrl, String hint, IconData icon, {int maxLines = 1}) {
+    return TextField(
+      controller: ctrl, maxLines: maxLines,
+      decoration: InputDecoration(
+        hintText: hint, prefixIcon: Icon(icon, color: AppColors.primaryBlue),
+        filled: true, fillColor: const Color(0xFFF8F9FD),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton() => SizedBox(
+    width: double.infinity, height: 60,
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
+      onPressed: _isSending ? null : _send,
+      child: _isSending ? const CircularProgressIndicator(color: Colors.white) : const Text("إرسال البلاغ الآن ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
     ),
   );
 
-  void _showAddDialog() {
-    showModalBottomSheet(
-      context: context, isScrollControlled: true, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-      builder: (c) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom, left: 25, right: 25, top: 25),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text("تذكرة دعم جديدة", style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.bold)),
-          DropdownButtonFormField<String>(initialValue: _subject, items: _subjects.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => setState(() => _subject = v), decoration: const InputDecoration(labelText: "الموضوع")),
-          TextField(controller: _descCtrl, maxLines: 3, decoration: const InputDecoration(labelText: "التفاصيل")),
-          const SizedBox(height: 20),
-          ElevatedButton(onPressed: () async {
-            await ApiService().createComplaint(_subject!, _descCtrl.text); // [استدعاء]: إرسال للقاعدة
-            Navigator.pop(c); setState(() {});
-          }, child: const Text("إرسال الشكوى الآن")),
-          const SizedBox(height: 30),
-        ]),
-      ),
-    );
+  void _send() async {
+    if (_titleCtrl.text.isEmpty || _descCtrl.text.isEmpty) return;
+    setState(() => _isSending = true);
+    try {
+      await ApiService().createComplaint(_titleCtrl.text, _descCtrl.text);
+      _titleCtrl.clear(); _descCtrl.clear();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم إرسال بلاغك بنجاح "), backgroundColor: Colors.green));
+    } finally { setState(() => _isSending = false); }
   }
 
-  Widget _complaintCard(dynamic item) => Card(
-    margin: const EdgeInsets.only(bottom: 10),
-    child: ListTile(title: Text(item['title'] ?? ""), subtitle: Text(item['status'] ?? ""), trailing: const Icon(Icons.info_outline)),
-  );
+  Color _getStatusColor(String s) => s == 'resolved' ? Colors.green : (s == 'rejected' ? Colors.red : Colors.orange);
+  String _getStatusText(String s) => s == 'resolved' ? "تم الحل" : (s == 'rejected' ? "مرفوض" : "قيد المراجعة");
+  Widget _label(String t) => Padding(padding: const EdgeInsets.only(bottom: 8, right: 5), child: Text(t, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14)));
+  Widget _buildEmptyState() => const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.inbox_rounded, size: 80, color: Colors.grey), Text("لا توجد بلاغات سابقة")]));
 }
