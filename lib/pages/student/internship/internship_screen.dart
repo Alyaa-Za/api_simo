@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api/api_s.dart';
 import '../../../core/ui/app_color.dart';
 import 'reports_screen.dart';
-// تم حذف استيراد الحضور بناءً على طلبك
 import '../evaluation/evaluation_screen.dart';
 
 class InternshipScreen extends StatefulWidget {
@@ -14,7 +13,6 @@ class InternshipScreen extends StatefulWidget {
 }
 
 class _InternshipScreenState extends State<InternshipScreen> {
-  // جلب بيانات التدريب (دالة رقم 13 في الباك أند)
   Future<Map<String, dynamic>> _fetchInternshipData() async {
     final response = await ApiService().getMyInternship();
     return response['data'];
@@ -25,7 +23,7 @@ class _InternshipScreenState extends State<InternshipScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F7FF), // خلفية ملكية باردة
+        backgroundColor: const Color(0xFFF4F7FF),
         body: FutureBuilder<Map<String, dynamic>>(
           future: _fetchInternshipData(),
           builder: (context, snapshot) {
@@ -41,7 +39,6 @@ class _InternshipScreenState extends State<InternshipScreen> {
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
-                // 1. [Header الفخم]: البطاقة التعريفية للتدريب
                 SliverToBoxAdapter(
                   child: _buildPremiumHeader(
                     data['opportunity']?['title'] ?? "برنامج التدريب الميداني",
@@ -50,21 +47,20 @@ class _InternshipScreenState extends State<InternshipScreen> {
                   ),
                 ),
 
-                // 2. [قسم الخيارات]: شبكة الأزرار الفخمة
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 30, 20, 100),
                   sliver: SliverGrid.count(
                     crossAxisCount: 2,
                     mainAxisSpacing: 20,
                     crossAxisSpacing: 20,
-                    childAspectRatio: 1.1, // لجعل الكروت مربعة بلمسة فخمة
+                    childAspectRatio: 1.1,
                     children: [
                       _buildOptionCard(
                         context,
                         "التقارير اليومية",
                         "رفع ومتابعة الإنجاز",
                         Icons.edit_note_rounded,
-                        const Color(0xFF6366F1), // Indigo
+                        const Color(0xFF6366F1),
                         const ReportsScreen(),
                       ),
                       _buildOptionCard(
@@ -72,7 +68,7 @@ class _InternshipScreenState extends State<InternshipScreen> {
                         "تقييم الأداء",
                         "النتيجة والملاحظات",
                         Icons.auto_graph_rounded,
-                        const Color(0xFFF59E0B), // Amber
+                        const Color(0xFFF59E0B),
                         const EvaluationScreen(),
                       ),
                       _buildOptionCard(
@@ -80,7 +76,7 @@ class _InternshipScreenState extends State<InternshipScreen> {
                         "المهام الموكلة",
                         "قائمة المتطلبات",
                         Icons.task_alt_rounded,
-                        const Color(0xFF10B981), // Emerald
+                        const Color(0xFF10B981),
                         null,
                         isDetail: true,
                         taskData: data,
@@ -90,7 +86,7 @@ class _InternshipScreenState extends State<InternshipScreen> {
                         "الخطة الزمنية",
                         "مواعيد البداية والنهاية",
                         Icons.calendar_today_rounded,
-                        const Color(0xFF3B82F6), // Blue
+                        const Color(0xFF3B82F6),
                         null,
                         isTimeline: true,
                         taskData: data,

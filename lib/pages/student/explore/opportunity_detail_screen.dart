@@ -13,8 +13,18 @@ class OpportunityDetailScreen extends StatefulWidget {
 
 class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
   bool _isChecking = false;
+  // قائمة لتخزين وحدات التحكم الخاصة بالأسئلة التي تضعها المؤسسة
+  final List<TextEditingController> _customControllers = [];
 
-  // ── 1. فحص حالة الملف قبل التقديم ──
+  @override
+  void dispose() {
+    for (var c in _customControllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  // ── 1. فحص حالة الملف ──
   Future<void> _handleApply() async {
     setState(() => _isChecking = true);
     try {
@@ -24,90 +34,143 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
       int percentage = int.tryParse(data['completion_percentage']?.toString() ?? '0') ?? 0;
 
       if (isComplete || percentage >= 100) {
-        _showFancyConfirmSheet(); // فتح نافذة التأكيد الفخمة
+        _showDynamicQuestionsSheet(); // فتح نافذة الأسئلة الضخمة
       } else {
         _showPremiumWarning(percentage);
       }
     } catch (e) {
-      _showPremiumMessage("خطأ في الاتصال", "تعذر التحقق من حالة الملف الشخصي حالياً.", true);
+      _showPremiumMessage("خطأ في الاتصال", "تعذر التحقق من حالة الملف الشخصي.", true);
     } finally {
       if (mounted) setState(() => _isChecking = false);
     }
   }
 
-  // ── 2. نافذة التأكيد المنبثقة (تصميم ملكي) ──
-  void _showFancyConfirmSheet() {
+  // ── 2. نافذة الأسئلة الضخمة (المطلوب تعديلها فقط) ──
+  void _showDynamicQuestionsSheet() {
+    // استخراج الأسئلة من بيانات الفرصة
+    final dynamic rawQs = widget.opportunity['custom_questions'];
+    List<String> questions = [];
+    if (rawQs is List) questions = List<String>.from(rawQs);
+    else if (rawQs is String && rawQs.isNotEmpty) questions = rawQs.split(',');
+
+    // تجهيز الـ Controllers
+    _customControllers.clear();
+    for (var i = 0; i < questions.length; i++) {
+      _customControllers.add(TextEditingController());
+    }
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.5),
-      builder: (context) => Directionality(
+      builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: Container(
-          padding: const EdgeInsets.all(30),
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 30,
+              left: 30, right: 30, top: 20
+          ),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(50)), // حواف ضخمة
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(10))),
-              const SizedBox(height: 25),
-              const Icon(Icons.verified_user_outlined, size: 60, color: AppColors.primaryBlue),
-              const SizedBox(height: 20),
-              Text("تأكيد إرسال الطلب", style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              const Text("عند التأكيد، سيتم إرسال ملفك الأكاديمي لمراجعة الإدارة والمؤسسة.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, height: 1.5)),
-              const SizedBox(height: 35),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                      child: const Text("تراجع"),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(10))),
+                const SizedBox(height: 30),
+                const Icon(Icons.assignment_turned_in_rounded, size: 50, color: AppColors.primaryBlue),
+                const SizedBox(height: 15),
+                Text("متطلبات التقديم", style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.w900)),
+                const Text("يرجى الإجابة على أسئلة المؤسسة لإتمام الطلب", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 30),
+
+                // توليد حقول الأسئلة ديناميكياً بتصميم "ضخم"
+                if (questions.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text("لا توجد أسئلة إضافية، يمكنك التقديم مباشرة."),
+                  )
+                else
+                  ...List.generate(questions.length, (index) {
+                    return _buildLargeQuestionInput(questions[index].trim(), _customControllers[index]);
+                  }),
+
+                const SizedBox(height: 30),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                        child: const Text("إلغاء"),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _submitApplication,
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                      child: const Text("تأكيد التقديم", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _submitWithAnswers(questions),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          elevation: 5,
+                        ),
+                        child: const Text("إرسال الطلب", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ── 3. إرسال الطلب الفعلي (إصلاح خطأ الـ Null) ──
-  Future<void> _submitApplication() async {
-    // حل مشكلة الـ ID عبر فحص كل الاحتمالات الممكنة للمسمى
+  // ويدجت حقل السؤال الضخم
+  Widget _buildLargeQuestionInput(String label, TextEditingController ctrl) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textDark)),
+          const SizedBox(height: 10),
+          TextField(
+            controller: ctrl,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: "اكتب إجابتك هنا...",
+              filled: true, fillColor: const Color(0xFFF8F9FD),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 3. إرسال الطلب الفعلي ──
+  Future<void> _submitWithAnswers(List<String> qs) async {
+    String msg = "";
+    for (int i = 0; i < qs.length; i++) {
+      msg += "${qs[i]}: ${_customControllers[i].text}\n";
+    }
+
     final dynamic rawId = widget.opportunity['id'] ?? widget.opportunity['opportunity_id'];
     final int oppId = int.tryParse(rawId.toString()) ?? 0;
 
-    Navigator.pop(context); // إغلاق الـ BottomSheet
-
-    if (oppId == 0) {
-      _showPremiumMessage("خطأ فني", "لم يتم العثور على معرف الفرصة (ID NULL)", true);
-      return;
-    }
-
+    Navigator.pop(context);
     setState(() => _isChecking = true);
     try {
-      // إرسال الطلب للباك أند
-      await ApiService().applyToOpportunity(oppId, "أرغب في الانضمام للتدريب الميداني", "تم التقديم عبر التطبيق");
-
-      _showPremiumMessage("تم بنجاح!", "تم إرسال طلبك للأدمن. يمكنك متابعة الحالة من الداش بورد ✅", false);
+      await ApiService().applyToOpportunity(oppId, msg, "تم التقديم عبر الجوال");
+      _showPremiumMessage("تم بنجاح!", "طلبك قيد المراجعة الآن ✅", false);
     } catch (e) {
-      _showPremiumMessage("فشل التقديم", e.toString().replaceAll("Exception: ", ""), true);
+      _showPremiumMessage("فشل التقديم", e.toString(), true);
     } finally {
       if (mounted) setState(() => _isChecking = false);
     }
@@ -140,7 +203,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
                           const SizedBox(height: 15),
                           _buildInfoCard("وصف التدريب", opp['description'] ?? "لا يوجد وصف", Icons.description_outlined, AppColors.primaryBlue),
                           const SizedBox(height: 15),
-                          _buildInfoCard("المتطلبات", opp['skills']?.toString() ?? "غير محددة", Icons.psychology_outlined, Colors.teal),
+                          _buildInfoCard("المتطلبات المهارية", opp['required_skills'] ?? opp['skills']?.toString() ?? "غير محددة", Icons.psychology_outlined, Colors.teal),
                           const SizedBox(height: 120),
                         ],
                       ),
@@ -149,107 +212,18 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
                 ],
               ),
             ),
-            Align(alignment: Alignment.bottomCenter, child: _buildApplyButton()),
+            Align(alignment: Alignment.bottomCenter, child: _buildApplyButtonWidget()),
           ],
         ),
       ),
     );
   }
 
-  // ── عناصر التصميم الفخمة ──
-  Widget _buildPremiumHeaderBackground() => Container(
-    height: MediaQuery.of(context).size.height * 0.35,
-    decoration: const BoxDecoration(
-      gradient: AppColors.splashGradient,
-      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(50), bottomRight: Radius.circular(50)),
-    ),
-  );
-
-  Widget _buildTopBar() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 10),
-    child: Row(children: [
-      IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white), onPressed: () => Navigator.pop(context)),
-      Text("تفاصيل الفرصة", style: GoogleFonts.tajawal(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))
-    ]),
-  );
-
-  Widget _buildHeroCard(dynamic opp) => Container(
-    width: double.infinity, padding: const EdgeInsets.all(25),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(35), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20)]),
-    child: Column(children: [
-      Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: AppColors.primaryBlue.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.business_center, size: 40, color: AppColors.primaryBlue)),
-      const SizedBox(height: 15),
-      Text(opp['title'] ?? "", style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.w900)),
-      Text(opp['institution']?['name'] ?? "", style: const TextStyle(color: Colors.grey)),
-      const SizedBox(height: 15),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.location_on, size: 16, color: Colors.redAccent), Text(" ${opp['city'] ?? ''}")])
-    ]),
-  );
-
-  Widget _buildInfoCard(String t, String c, IconData i, Color col) => Container(
-    width: double.infinity, padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.grey.shade50)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Icon(i, color: col, size: 18), const SizedBox(width: 10), Text(t, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 15))]),
-      const SizedBox(height: 10),
-      Text(c, style: const TextStyle(height: 1.6, color: Colors.black87)),
-    ]),
-  );
-
-  Widget _buildApplyButton() => Container(
-    padding: const EdgeInsets.all(25),
-    child: Container(
-      width: double.infinity, height: 65,
-      decoration: BoxDecoration(gradient: AppColors.buttonGradient, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))]),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-        onPressed: _isChecking ? null : _handleApply,
-        child: _isChecking ? const CircularProgressIndicator(color: Colors.white) : Text("إرسال طلب الانضمام ✨", style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-      ),
-    ),
-  );
-
-  void _showPremiumMessage(String title, String msg, bool isError) {
-    showDialog(
-      context: context,
-      builder: (c) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(isError ? Icons.error_rounded : Icons.check_circle, size: 60, color: isError ? Colors.red : Colors.green),
-              const SizedBox(height: 20),
-              Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
-              const SizedBox(height: 10),
-              Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
-              const SizedBox(height: 25),
-              SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => Navigator.pop(c), child: const Text("موافق"))),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showPremiumWarning(int per) {
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.info_outline, size: 60, color: Colors.orange),
-            const SizedBox(height: 20),
-            Text("ملفك غير مكتمل ($per%)", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
-            const Text("أكمل بيانات ملفك الشخصي لتتمكن من التقديم.", textAlign: TextAlign.center),
-            const SizedBox(height: 25),
-            ElevatedButton(onPressed: () => Navigator.pop(c), child: const Text("حسناً")),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildPremiumHeaderBackground() => Container(height: MediaQuery.of(context).size.height * 0.35, decoration: const BoxDecoration(gradient: AppColors.splashGradient, borderRadius: BorderRadius.only(bottomLeft: Radius.circular(50), bottomRight: Radius.circular(50))));
+  Widget _buildTopBar() => Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Row(children: [IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20), onPressed: () => Navigator.pop(context)), Text("تفاصيل الفرصة", style: GoogleFonts.tajawal(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))]));
+  Widget _buildHeroCard(dynamic opp) => Container(width: double.infinity, padding: const EdgeInsets.all(25), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(35), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)]), child: Column(children: [Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: AppColors.primaryBlue.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.business_center, size: 40, color: AppColors.primaryBlue)), const SizedBox(height: 15), Text(opp['title'] ?? "", textAlign: TextAlign.center, style: GoogleFonts.tajawal(fontSize: 18, fontWeight: FontWeight.w900)), Text(opp['institution']?['name'] ?? "", style: const TextStyle(color: Colors.grey, fontSize: 14))]));
+  Widget _buildInfoCard(String title, String desc, IconData icon, Color color) => Container(width: double.infinity, margin: const EdgeInsets.only(bottom: 15), padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Icon(icon, size: 18, color: color), const SizedBox(width: 10), Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14))]), const SizedBox(height: 10), Text(desc, style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.6))]));
+  Widget _buildApplyButtonWidget() => Container(padding: const EdgeInsets.all(25), child: ElevatedButton(onPressed: _isChecking ? null : _handleApply, style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, minimumSize: const Size(double.infinity, 65), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))), child: _isChecking ? const CircularProgressIndicator(color: Colors.white) : Text("إرسال طلب الانضمام", style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))));
+  void _showPremiumMessage(String title, String msg, bool isError) { showDialog(context: context, builder: (c) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), title: Text(title, textAlign: TextAlign.center), content: Text(msg, textAlign: TextAlign.center), actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text("موافق"))])); }
+  void _showPremiumWarning(int p) { showDialog(context: context, builder: (c) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), title: const Icon(Icons.warning_amber_rounded, size: 50, color: Colors.orange), content: Text("ملفك غير مكتمل ($p%). أكمل بياناتك أولاً."), actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text("فهمت"))])); }
 }

@@ -6,7 +6,7 @@ import '../../widgets/side_bar.dart';
 import 'applications/applications_screen.dart';
 import 'explore/explore_screen.dart';
 import 'internship/internship_screen.dart';
-import 'profile/profile_screen.dart';
+import 'profile/profile_screen.dart' hide StudentHomeScreen;
 import '../../widgets/floating_nav_bar.dart';
 import 'student_home_screen.dart';
 

@@ -9,7 +9,9 @@ class InternDetailsTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int internshipId = int.tryParse(intern['internship_id']?.toString() ?? '0') ?? 0;
+    // محاولة جلب المعرف من أكثر من مسمى لضمان عدم حدوث خطأ
+    final int internshipId = int.tryParse(intern['internship_id']?.toString() ??
+        intern['id']?.toString() ?? '0') ?? 0;
 
     return DefaultTabController(
       length: 2,
@@ -22,7 +24,7 @@ class InternDetailsTabs extends StatelessWidget {
             flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppColors.splashGradient)),
             title: Text(
               intern['full_name'] ?? "تفاصيل المتدرب",
-              style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 16),
+              style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
             ),
             bottom: TabBar(
               indicatorColor: Colors.white,
@@ -48,6 +50,7 @@ class InternDetailsTabs extends StatelessWidget {
   }
 }
 
+// ── [قسم التقارير الأسبوعية] ──
 class _ReportsTab extends StatelessWidget {
   final int internId;
   const _ReportsTab({required this.internId});
@@ -106,9 +109,9 @@ class _ReportsTab extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text("محتوى التقرير", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text("محتوى التقرير الأسبوعي", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
             const Divider(height: 30),
-            Text(report['content'] ?? "لا يوجد محتوى نصي.",
+            Text(report['content'] ?? "لا يوجد محتوى نصي لهذا التقرير.",
                 style: const TextStyle(height: 1.8, fontSize: 14, color: Colors.black87)),
             const SizedBox(height: 30),
           ],
@@ -118,6 +121,7 @@ class _ReportsTab extends StatelessWidget {
   }
 }
 
+// ── [قسم التقييم النهائي - الجزء المصلح] ──
 class _EvaluationTab extends StatefulWidget {
   final int internId;
   const _EvaluationTab({required this.internId});
@@ -138,7 +142,7 @@ class _EvaluationTabState extends State<_EvaluationTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader("التقييم الرقمي (من 100)"),
+          _buildSectionHeader("التقييم الرقمي (من 100)"),
           const SizedBox(height: 12),
           TextField(
             controller: _scoreCtrl,
@@ -153,9 +157,9 @@ class _EvaluationTabState extends State<_EvaluationTab> {
 
           const SizedBox(height: 30),
 
-          _buildHeader("الملاحظات الختامية"),
+          _buildSectionHeader("الملاحظات الختامية والتوصية"),
           const Text(
-            "يرجى كتابة تقييم شامل لأداء المتدرب، مهاراته التقنية، ومدى التزامه بالحضور خلال فترة التدريب:",
+            "يرجى كتابة تقييم شامل لأداء المتدرب، وذكر أي توصيات مهنية تود إضافتها:",
             style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.5),
           ),
           const SizedBox(height: 15),
@@ -163,7 +167,7 @@ class _EvaluationTabState extends State<_EvaluationTab> {
             controller: _notesCtrl,
             maxLines: 6,
             decoration: InputDecoration(
-              hintText: "مثال: المتدرب متميز في المهارات البرمجية، ملتزم جداً بمواعيد الحضور والانصراف، وأظهر قدرة عالية على التعلم بسرعة...",
+              hintText: "اكتب ملاحظاتك هنا... (سيراها الطالب في حسابه)",
               filled: true, fillColor: Colors.white,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
             ),
@@ -193,10 +197,11 @@ class _EvaluationTabState extends State<_EvaluationTab> {
     );
   }
 
-  Widget _buildHeader(String title) {
+  Widget _buildSectionHeader(String title) {
     return Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, color: AppColors.primaryBlue, fontSize: 15));
   }
 
+  // ── [الدالة المنقذة]: إرسال التقييم بالمسميات الصحيحة ──
   Future<void> _submitFinalEvaluation() async {
     if (_scoreCtrl.text.isEmpty) {
       _showSnack("يرجى إدخال الدرجة أولاً", Colors.red);
@@ -211,13 +216,22 @@ class _EvaluationTabState extends State<_EvaluationTab> {
 
     setState(() => _isSaving = true);
     try {
-      await ApiService().evaluateInternship(widget.internId, score, _notesCtrl.text);
+      // إرسال البيانات مَسْطرة (مع معرف التدريب، الدرجة، والملاحظات)
+      await ApiService().evaluateInternship(widget.internId, score, _notesCtrl.text.trim());
+
       if (mounted) {
-        _showSnack("تم إرسال التقييم للجامعة بنجاح ", Colors.green);
+        _showSnack("✅ تم اعتماد وإرسال التقييم بنجاح للطالب", Colors.green);
+        _scoreCtrl.clear();
+        _notesCtrl.clear();
+
+        // العودة للخلف بعد النجاح
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) Navigator.pop(context);
+        });
       }
     } catch (e) {
       if (mounted) {
-        _showSnack("فشل الإرسال: تأكد من الاتصال بقاعدة البيانات", Colors.red);
+        _showSnack("❌ فشل الإرسال: $e", Colors.red);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -225,6 +239,13 @@ class _EvaluationTabState extends State<_EvaluationTab> {
   }
 
   void _showSnack(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        )
+    );
   }
 }

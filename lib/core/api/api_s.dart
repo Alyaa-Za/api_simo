@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/http.dart' as https;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -149,7 +148,6 @@ class ApiService {
     return [];
   }
 
-  // LOGIN (يدعم الرقم الأكاديمي أو الإيميل)
   Future<Map<String, dynamic>> login(
       String login,
       String password,
@@ -195,7 +193,7 @@ class ApiService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return responseData;
     } else {
-      // إرجاع رسالة الخطأ القادمة من الباك أند (مثل: الإيميل مستخدم مسبقاً)
+
       throw Exception(responseData['message'] ?? "فشل عملية التسجيل");
     }
   }
@@ -336,6 +334,7 @@ class ApiService {
   Future<void> uploadProfilePhoto(String path) async {
     await loadToken();
 
+    // 1. نرسل الطلب كـ POST (هذه خدعة الـ Spoofing لضمان عمل الملفات)
     final request = http.MultipartRequest(
       'POST',
       _uri('/api/student/profile/photo'),
@@ -343,6 +342,10 @@ class ApiService {
 
     request.headers.addAll(_headers);
 
+    // 2. نخبر السيرفر أننا نقصد PATCH فعلياً (هذا ما يطلبه أغلب مبرمجي الباك أند)
+    request.fields['_method'] = 'PATCH';
+
+    // 3. إضافة الملف
     request.files.add(
       await http.MultipartFile.fromPath('photo', path),
     );
@@ -352,6 +355,8 @@ class ApiService {
 
     _handleResponse(result);
   }
+
+
 
   Future<Map<String, dynamic>> uploadDocument(String filePath) async {
     await loadToken();

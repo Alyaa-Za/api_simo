@@ -27,7 +27,7 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> {
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: const Color(0xFFF4F7FF), // خلفية باردة وفخمة
+          backgroundColor: const Color(0xFFF4F7FF),
           appBar: PreferredSize(
             preferredSize: const Size.fromHeight(80),
             child: Container(

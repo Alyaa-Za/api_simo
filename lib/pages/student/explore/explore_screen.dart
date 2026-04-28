@@ -26,7 +26,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     _fetchOpportunities();
   }
 
-  // جلب البيانات من الـ API
   Future<void> _fetchOpportunities() async {
     try {
       final data = await ApiService().getOpportunities();
@@ -42,7 +41,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
   }
 
-  // منطق الفلترة الموحد
   void _applyFilter() {
     setState(() {
       _filteredData = _allOpportunities.where((item) {
@@ -64,10 +62,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         backgroundColor: const Color(0xFFF8F9FD),
         body: Column(
           children: [
-            // ── الهيدر الفخم مع حقل البحث وزر الفلترة ──
             _buildPremiumHeader(),
 
-            // ── قائمة الفرص بالكروت العائمة ──
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -98,7 +94,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         children: [
           Text("استكشف الفرص", style: GoogleFonts.tajawal(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 5),
-          Text("ابحث عن مسارك المهني القادم ✨", style: GoogleFonts.tajawal(color: Colors.white70, fontSize: 13)),
+          Text("ابحث عن مسارك المهني القادم ", style: GoogleFonts.tajawal(color: Colors.white70, fontSize: 13)),
           const SizedBox(height: 25),
           Row(
             children: [
@@ -121,7 +117,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              // زر الفلترة المعتمد
               GestureDetector(
                 onTap: _showFilterOptions,
                 child: Container(

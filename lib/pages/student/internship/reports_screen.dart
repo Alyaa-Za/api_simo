@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:file_picker/file_picker.dart'; // المكتبة المطلوبة للملفات
+import 'package:file_picker/file_picker.dart';
 import '../../../core/api/api_s.dart';
 import '../../../core/ui/app_color.dart';
 
@@ -16,15 +16,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   final _contentCtrl = TextEditingController();
   int _week = 1;
   bool _loading = false;
-  File? _selectedFile; // هنا سيتم حفظ ملف الـ PDF أو الـ Word
+  File? _selectedFile;
 
-  // ── الدالة المصلحة لاختيار الملفات (بدون خطأ platform getter) ──
   Future<void> _pickDocument() async {
     try {
-      // الطريقة الصحيحة للاستدعاء في الإصدارات الجديدة
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'png'], // السماح بالملفات الأكاديمية
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'png'],
       );
 
       if (result != null && result.files.single.path != null) {
@@ -45,7 +43,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     setState(() => _loading = true);
     try {
-      // إرسال البيانات للباك أند مع مسار الملف الحقيقي
       await ApiService().submitReport(
         title: _titleCtrl.text.trim(),
         content: _contentCtrl.text.trim(),
@@ -111,7 +108,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     const SizedBox(height: 25),
 
                     _sectionLabel("ملف التقرير (PDF/Word)", Icons.cloud_upload_outlined),
-                    _buildFilePickerBox(), // الزر الفخم لاختيار الملف
+                    _buildFilePickerBox(),
 
                     const SizedBox(height: 40),
                     _buildSubmitButton(),
@@ -146,7 +143,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             Expanded(
               child: Text(
                 _selectedFile != null
-                    ? _selectedFile!.path.split('/').last // عرض اسم الملف المختار
+                    ? _selectedFile!.path.split('/').last
                     : "اضغط لاختيار ملف التقرير",
                 style: TextStyle(color: _selectedFile != null ? Colors.black87 : Colors.grey, fontSize: 13),
                 overflow: TextOverflow.ellipsis,
@@ -158,7 +155,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // --- دوال التصميم المساعدة ---
   Widget _sectionLabel(String t, IconData i) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
     child: Row(children: [Icon(i, size: 18, color: AppColors.primaryBlue), const SizedBox(width: 8), Text(t, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14))]),

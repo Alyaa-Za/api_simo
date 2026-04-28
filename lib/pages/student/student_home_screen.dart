@@ -13,20 +13,20 @@ class StudentHomeScreen extends StatefulWidget {
 }
 
 class _StudentHomeScreenState extends State<StudentHomeScreen> {
-  late Future<Map<String, dynamic>> _statsFuture;
-  late Future<Map<String, dynamic>> _timelineFuture;
-  late Future<List<dynamic>> _recommendationsFuture;
+  late Future<Map<String, dynamic>> _profileFuture;
+  late Future<Map<String, dynamic>> _internshipFuture;
+  late Future<List<dynamic>> _oppsFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
+    _loadAllData();
   }
 
-  void _loadDashboardData() {
-    _statsFuture = ApiService().getDashboardStats();
-    _timelineFuture = ApiService().getTimeline();
-    _recommendationsFuture = ApiService().getOpportunities();
+  void _loadAllData() {
+    _profileFuture = ApiService().getProfile();
+    _internshipFuture = ApiService().getMyInternship();
+    _oppsFuture = ApiService().getOpportunities();
   }
 
   @override
@@ -34,193 +34,218 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FD),
+        backgroundColor: const Color(0xFFF4F7FF),
         body: RefreshIndicator(
-          onRefresh: () async => setState(() => _loadDashboardData()),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 50, 20, 100), // مسافة علوية بديلة للهيدر
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. [قسم الأرقام والإحصائيات]: يظهر في أعلى الشاشة مباشرة
-                _sectionTitle("نظرة عامة على النشاط", Icons.grid_view_rounded),
-                const SizedBox(height: 15),
-                _buildQuickStats(),
+          onRefresh: () async => setState(() => _loadAllData()),
+          child: FutureBuilder(
+            future: Future.wait([_profileFuture, _internshipFuture, _oppsFuture]),
+            builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                // 2. [مسار الطلب]: تتبع الحالة الحالية
-                const SizedBox(height: 35),
-                _sectionTitle("حالة طلب الانضمام الأخير", Icons. analytics_outlined),
-                const SizedBox(height: 15),
-                _buildTimelineCard(),
+              final profileData = snapshot.data?[0]['data'] ?? {};
+              final internshipData = snapshot.data?[1]['data'] ?? {};
+              final recommendations = snapshot.data?[2] ?? [];
 
-                // 3. [فرص مقترحة]: بطاقات الفرص المتاحة
-                const SizedBox(height: 35),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+              int completionPercentage = profileData['completion_percentage'] ?? 0;
+              bool isComplete = profileData['is_profile_complete'] ?? false;
+
+              bool hasActiveIntern = internshipData != null && internshipData.isNotEmpty;
+              int activeCount = hasActiveIntern ? 1 : 0;
+              String internTitle = hasActiveIntern
+                  ? (internshipData['opportunity']?['title'] ?? "جاري التدريب")
+                  : "لا يوجد تدريب نشط حالياً";
+
+              List steps = profileData['latest_application_steps'] ?? [];
+
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 40, 20, 100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _sectionTitle("فرص تدريبية مقترحة", Icons.auto_awesome_rounded),
-                    TextButton(
-                      onPressed: widget.onSeeAllPressed,
-                      child: Text("عرض الكل",
-                          style: GoogleFonts.tajawal(color: AppColors.primaryBlue, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 5),
-                _buildRecommendationsList(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // كروت الإحصائيات (الفرص المتاحة وطلباتي)
-  Widget _buildQuickStats() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _statsFuture,
-      builder: (context, snapshot) {
-        final stats = snapshot.data?['data'] ?? {};
-        return Row(
-          children: [
-            _statItem("فرص متاحة حالياً", stats['total_opportunities']?.toString() ?? "0", Colors.orange),
-            const SizedBox(width: 12),
-            _statItem("طلباتي المقدمة", stats['my_requests_count']?.toString() ?? "0", AppColors.primaryBlue),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _statItem(String label, String value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        child: Column(
-          children: [
-            Text(value, style: GoogleFonts.tajawal(fontSize: 26, fontWeight: FontWeight.w900, color: color)),
-            const SizedBox(height: 5),
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // كرت مسار الطلب (التايم لاين)
-  Widget _buildTimelineCard() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _timelineFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-        final steps = snapshot.data?['data']?['steps'] ?? [];
-
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(25),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-          ),
-          child: steps.isEmpty
-              ? const Center(child: Text("لا توجد طلبات تدريب مسجلة حالياً"))
-              : Column(
-            children: List.generate(steps.length, (index) {
-              final step = steps[index];
-              bool isDone = step['is_completed'] ?? false;
-              return IntrinsicHeight(
-                child: Row(
-                  children: [
-                    Column(
+                    Row(
                       children: [
-                        Icon(isDone ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
-                            color: isDone ? Colors.green : Colors.grey.shade300, size: 22),
-                        if (index != steps.length - 1)
-                          Expanded(child: Container(width: 2, color: isDone ? Colors.green : Colors.grey.shade100)),
+                        _buildStatBox(
+                            "اكتمال الملف",
+                            isComplete ? "مكتمل " : "$completionPercentage%",
+                            isComplete ? Colors.green : Colors.orange,
+                            Icons.person_pin_rounded
+                        ),
+                        const SizedBox(width: 15),
+                        _buildStatBox(
+                            "التدريبات النشطة",
+                            activeCount.toString(),
+                            AppColors.primaryBlue,
+                            Icons.workspace_premium_rounded
+                        ),
                       ],
                     ),
-                    const SizedBox(width: 15),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(step['title'] ?? "",
-                          style: GoogleFonts.tajawal(fontSize: 14,
-                              fontWeight: isDone ? FontWeight.bold : FontWeight.normal,
-                              color: isDone ? Colors.black87 : Colors.grey)),
+
+                    const SizedBox(height: 15),
+
+                    _buildHeroInternCard(hasActiveIntern, internTitle),
+
+                    if (steps.isNotEmpty) ...[
+                      const SizedBox(height: 40),
+                      _sectionTitle("تتبع طلب الانضمام", Icons.bubble_chart_rounded),
+                      const SizedBox(height: 15),
+                      _buildTimeline(steps),
+                    ],
+
+                    const SizedBox(height: 40),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _sectionTitle("فرص مقترحة لك", Icons.auto_awesome_rounded),
+                        TextButton(
+                            onPressed: widget.onSeeAllPressed,
+                            child: Text("استكشف الكل", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, color: AppColors.primaryBlue))
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 10),
+                    _buildRecommendations(recommendations),
                   ],
                 ),
               );
-            }),
+            },
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  // قائمة الفرص المقترحة
-  Widget _buildRecommendationsList() {
-    return FutureBuilder<List<dynamic>>(
-      future: _recommendationsFuture,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox();
-        final list = snapshot.data!.reversed.take(3).toList();
-        return Column(
-          children: list.map((opp) => _recommendationCard(opp)).toList(),
-        );
-      },
-    );
-  }
-
-  Widget _recommendationCard(dynamic opp) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => OpportunityDetailScreen(opportunity: opp))),
+  Widget _buildStatBox(String title, String val, Color col, IconData ico) {
+    return Expanded(
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(25),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [BoxShadow(color: col.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))],
         ),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              height: 48, width: 48,
-              decoration: BoxDecoration(color: AppColors.primaryBlue.withOpacity(0.08), borderRadius: BorderRadius.circular(15)),
-              child: const Icon(Icons.business_center_rounded, color: AppColors.primaryBlue, size: 22),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(opp['title'] ?? "", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Text(opp['institution']?['name'] ?? "جهة غير محددة",
-                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+            Icon(ico, color: col, size: 28),
+            const SizedBox(height: 15),
+            Text(val, style: GoogleFonts.tajawal(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+            Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
     );
   }
 
-  Widget _sectionTitle(String title, IconData icon) {
+  Widget _buildHeroInternCard(bool active, String title) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(25),
+      decoration: BoxDecoration(
+        gradient: active ? AppColors.splashGradient : null,
+        color: active ? null : Colors.white,
+        borderRadius: BorderRadius.circular(35),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20)],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: active ? Colors.white24 : Colors.orange.withOpacity(0.1),
+            child: Icon(active ? Icons.verified_user_rounded : Icons.info_rounded, color: active ? Colors.white : Colors.orange),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(active ? "أنت الآن في مرحلة التدريب" : "حالة البرنامج",
+                    style: TextStyle(color: active ? Colors.white70 : Colors.grey, fontSize: 12)),
+                Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 17, color: active ? Colors.white : AppColors.textDark)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeline(List steps) {
+    return Container(
+      padding: const EdgeInsets.all(30),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(35)),
+      child: Column(
+        children: List.generate(steps.length, (index) {
+          final step = steps[index];
+          bool done = step['is_completed'] ?? false;
+          bool current = step['is_current'] ?? false;
+          return Row(
+            children: [
+              Column(
+                children: [
+                  Icon(done ? Icons.check_circle_rounded : (current ? Icons.radio_button_checked : Icons.radio_button_off),
+                      color: done ? Colors.green : (current ? AppColors.primaryBlue : Colors.grey.shade200), size: 24),
+                  if (index != steps.length - 1) Container(width: 2, height: 35, color: done ? Colors.green : Colors.grey.shade100),
+                ],
+              ),
+              const SizedBox(width: 20),
+              Text(step['title'] ?? "", style: GoogleFonts.tajawal(fontSize: 14, fontWeight: current ? FontWeight.w900 : FontWeight.bold)),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildRecommendations(List opps) {
+    if (opps.isEmpty) return const Center(child: Text("لا توجد فرص مقترحة حالياً"));
+    final list = opps.take(3).toList();
+    return Column(
+      children: list.map((opp) => GestureDetector(
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => OpportunityDetailScreen(opportunity: opp))),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8))],
+          ),
+          child: Row(
+            children: [
+              Container(
+                height: 55, width: 55,
+                decoration: BoxDecoration(color: AppColors.primaryBlue.withOpacity(0.08), borderRadius: BorderRadius.circular(18)),
+                child: const Icon(Icons.business_center_outlined, color: AppColors.primaryBlue, size: 26),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(opp['title'] ?? "عنوان الفرصة", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textDark), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 4),
+                    Text(opp['institution']?['name'] ?? "جهة التدريب", style: GoogleFonts.tajawal(fontSize: 12, color: Colors.grey.shade500)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
+            ],
+          ),
+        ),
+      )).toList(),
+    );
+  }
+
+  Widget _sectionTitle(String t, IconData i) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: AppColors.primaryBlue),
-        const SizedBox(width: 8),
-        Text(title, style: GoogleFonts.tajawal(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+        Icon(i, size: 20, color: AppColors.primaryBlue),
+        const SizedBox(width: 10),
+        Text(t, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark)),
       ],
     );
   }

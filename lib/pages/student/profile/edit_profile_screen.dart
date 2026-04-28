@@ -13,7 +13,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  // المتحكمات
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _bioController = TextEditingController();
@@ -31,22 +30,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCurrentData(); // جلب البيانات عند فتح الصفحة لكي لا تكون الحقول فارغة
+    _loadCurrentData();
   }
 
-  // ── دالة جلب البيانات وتثبيتها في الحقول ──
   Future<void> _loadCurrentData() async {
     setState(() => _isLoading = true);
     try {
       final response = await ApiService().getProfile();
-      final data = response['data'] ?? {}; // الباك أند عندك يرسل البيانات مباشرة في data
+      final data = response['data'] ?? {};
 
       setState(() {
         _nameController.text = data['full_name']?.toString() ?? "";
         _phoneController.text = data['phone']?.toString() ?? "";
         _bioController.text = data['bio']?.toString() ?? "";
 
-        // معالجة المهارات (قائمة أو نص)
         if (data['skills'] is List) {
           _skillsController.text = (data['skills'] as List).join(', ');
         } else {
@@ -56,7 +53,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _uniController.text = data['university']?.toString() ?? "";
         _gpaController.text = data['gpa']?.toString() ?? "";
 
-        // تثبيت قيم القوائم المنسدلة
         if (_cities.contains(data['city'])) _selectedCity = data['city'];
         if (_levels.contains(data['level'])) _selectedLevel = data['level'];
         if (_colleges.contains(data['college'])) _selectedCollege = data['college'];
@@ -92,13 +88,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       await ApiService().updateProfile(body);
 
-      // 🔥 [أهم خطوة]: بعد الحفظ بنجاح، لا نغلق الصفحة فوراً بل نعيد الجلب لتثبيت البيانات
       await _loadCurrentData();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم حفظ البيانات بنجاح وتثبيتها ✅"), backgroundColor: Colors.green));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم حفظ البيانات بنجاح وتثبيتها"), backgroundColor: Colors.green));
 
-      // ننتظر ثانية ليرى المستخدم النجاح ثم نعود
       Future.delayed(const Duration(seconds: 1), () {
         Navigator.pop(context, true);
       });
@@ -157,7 +151,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  // --- دوال بناء الـ UI (نفس الفخامة السابقة) ---
   Widget _buildSectionHeader(String title, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(right: 10, bottom: 15),
