@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/ui/app_color.dart';
 import '../../../core/api/api_s.dart';
+import '../../../core/theme/language_provider.dart';
 
 class InstitutionComplaintsScreen extends StatefulWidget {
   const InstitutionComplaintsScreen({super.key});
@@ -17,24 +19,28 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
 
   @override
   Widget build(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
+    bool isAr = langProvider.locale.languageCode == 'ar';
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FD),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          // ── إضافة زر الرجوع هنا ──
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+            icon: Icon(isAr ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios, color: Colors.white, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text("مركز البلاغات والدعم", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+          title: Text(isAr ? "مركز البلاغات والدعم" : "Support & Tickets",
+              style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
           centerTitle: true,
           elevation: 0,
           flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppColors.splashGradient)),
         ),
         body: Column(
           children: [
-            _buildActionHeader(),
+            _buildActionHeader(isAr, isDark),
 
             Expanded(
               child: FutureBuilder<List<dynamic>>(
@@ -44,12 +50,13 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
                     return const Center(child: CircularProgressIndicator());
                   }
                   final list = snapshot.data ?? [];
-                  if (list.isEmpty) return _buildEmpty();
+                  if (list.isEmpty) return _buildEmpty(isAr, isDark);
 
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
+                    physics: const BouncingScrollPhysics(),
                     itemCount: list.length,
-                    itemBuilder: (context, index) => _complaintCard(list[index]),
+                    itemBuilder: (context, index) => _complaintCard(list[index], isDark, isAr),
                   );
                 },
               ),
@@ -60,15 +67,16 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
     );
   }
 
-  Widget _buildActionHeader() {
+  Widget _buildActionHeader(bool isAr, bool isDark) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(30),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20)],
+        border: isDark ? Border.all(color: Colors.white.withOpacity(0.08)) : null,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.03), blurRadius: 20)],
       ),
       child: Column(
         children: [
@@ -76,7 +84,8 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
             children: [
               const Icon(Icons.info_outline_rounded, color: AppColors.primaryBlue),
               const SizedBox(width: 10),
-              Text("إجمالي البلاغات المقدمة", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
+              Text(isAr ? "سجل البلاغات المقدمة" : "Ticket History",
+                  style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.textDark)),
             ],
           ),
           const SizedBox(height: 20),
@@ -84,14 +93,14 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
             width: double.infinity,
             height: 55,
             child: ElevatedButton.icon(
-              onPressed: _showNewComplaintSheet,
+              onPressed: () => _showNewComplaintSheet(isAr, isDark),
               icon: const Icon(Icons.add_alert_rounded, color: Colors.white),
-              label: Text("رفع بلاغ جديد للإدارة", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
+              label: Text(isAr ? "رفع بلاغ جديد للإدارة" : "Submit New Ticket",
+                  style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE53935),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                elevation: 5,
-                shadowColor: Colors.red.withOpacity(0.3),
+                elevation: 0,
               ),
             ),
           )
@@ -100,39 +109,44 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
     );
   }
 
-  void _showNewComplaintSheet() {
+  void _showNewComplaintSheet(bool isAr, bool isDark) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (c) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
         child: Container(
           padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom + 30, left: 25, right: 25, top: 20),
-          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(40))),
+          decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(40))
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
+              Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
               const SizedBox(height: 25),
-              Text("تقديم بلاغ جديد", style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(isAr ? "تقديم بلاغ جديد" : "New Support Ticket",
+                  style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
               const SizedBox(height: 25),
-              _buildInput("عنوان البلاغ", Icons.title_rounded, _titleCtrl),
+              _buildInput(isAr ? "عنوان البلاغ" : "Subject", Icons.title_rounded, _titleCtrl, isDark),
               const SizedBox(height: 15),
-              _buildInput("تفاصيل المشكلة...", Icons.text_snippet_outlined, _descCtrl, maxLines: 4),
+              _buildInput(isAr ? "تفاصيل المشكلة..." : "Issue details...", Icons.text_snippet_outlined, _descCtrl, isDark, maxLines: 4),
               const SizedBox(height: 35),
               SizedBox(
                 width: double.infinity,
                 height: 60,
                 child: ElevatedButton(
-                  onPressed: _isSending ? null : _handleSend,
+                  onPressed: _isSending ? null : () => _handleSend(isAr),
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, shape: const StadiumBorder()),
                   child: _isSending
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text("إرسال الآن للجامعة", style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold)),
+                      : Text(isAr ? "إرسال الآن للجامعة" : "Submit to University",
+                      style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
-              const SizedBox(height: 35),
+              const SizedBox(height: 10),
             ],
           ),
         ),
@@ -140,7 +154,7 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
     );
   }
 
-  Future<void> _handleSend() async {
+  Future<void> _handleSend(bool isAr) async {
     if (_titleCtrl.text.isEmpty || _descCtrl.text.isEmpty) return;
     setState(() => _isSending = true);
     try {
@@ -149,44 +163,76 @@ class _InstitutionComplaintsScreenState extends State<InstitutionComplaintsScree
         Navigator.pop(context);
         _titleCtrl.clear(); _descCtrl.clear();
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم إرسال بلاغك بنجاح ✅"), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(isAr ? "تم إرسال بلاغك بنجاح " : "Ticket sent successfully "),
+            backgroundColor: Colors.green, behavior: SnackBarBehavior.floating
+        ));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("فشل الإرسال: $e"), backgroundColor: Colors.redAccent));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Error: $e"), backgroundColor: Colors.redAccent
+      ));
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
   }
 
-  Widget _complaintCard(dynamic data) {
+  Widget _complaintCard(dynamic data, bool isDark, bool isAr) {
     bool isDone = data['status'] == 'resolved';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: isDark ? Border.all(color: Colors.white.withOpacity(0.08)) : null,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+      ),
       child: ListTile(
-        title: Text(data['title'] ?? "", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
-        subtitle: Text(data['created_at']?.toString().substring(0, 10) ?? "", style: const TextStyle(fontSize: 11)),
+        contentPadding: const EdgeInsets.all(15),
+        title: Text(data['title'] ?? "",
+            style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+        subtitle: Text(data['created_at']?.toString().substring(0, 10) ?? "",
+            style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.grey)),
         trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(color: isDone ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-          child: Text(isDone ? "محلولة" : "تحت المراجعة", style: TextStyle(color: isDone ? Colors.green : Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+              color: isDone ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10)
+          ),
+          child: Text(
+              isDone ? (isAr ? "محلولة" : "Resolved") : (isAr ? "قيد المراجعة" : "Pending"),
+              style: TextStyle(color: isDone ? Colors.green : Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildInput(String label, IconData icon, TextEditingController ctrl, {int maxLines = 1}) {
+  Widget _buildInput(String label, IconData icon, TextEditingController ctrl, bool isDark, {int maxLines = 1}) {
     return TextField(
       controller: ctrl,
       maxLines: maxLines,
+      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: Colors.grey, fontSize: 13),
         prefixIcon: Icon(icon, color: AppColors.primaryBlue),
-        filled: true, fillColor: const Color(0xFFF8F9FD),
+        filled: true,
+        fillColor: isDark ? Colors.black26 : const Color(0xFFF8F9FD),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
       ),
     );
   }
 
-  Widget _buildEmpty() => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.history_edu_rounded, size: 80, color: Colors.grey.shade300), const SizedBox(height: 15), Text("لا يوجد بلاغات سابقة", style: GoogleFonts.tajawal(color: Colors.grey, fontWeight: FontWeight.bold))]));
+  Widget _buildEmpty(bool isAr, bool isDark) => Center(
+      child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history_edu_rounded, size: 80, color: isDark ? Colors.white10 : Colors.grey.shade300),
+            const SizedBox(height: 15),
+            Text(isAr ? "لا يوجد بلاغات سابقة" : "No previous tickets",
+                style: GoogleFonts.tajawal(color: Colors.grey, fontWeight: FontWeight.bold))
+          ]
+      )
+  );
 }

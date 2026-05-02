@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/ui/app_color.dart';
 import '../../../core/api/api_s.dart';
 import '../../../core/token_manager.dart';
+import '../../../core/theme/theme_provider.dart';
+import '../core/theme/language_provider.dart';
 import '../pages/login_screen.dart';
-import '../pages/student/settings/PrivacyPolicyScreen.dart';
+import '../pages/student/settings/privacypolicyscreen.dart';
 import '../pages/student/settings/complaints_screen.dart';
 import '../pages/student/settings/notification.dart';
 
@@ -22,54 +25,85 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
 
   @override
   Widget build(BuildContext context) {
+    // استدعاء المدراء (ثيم ولغة)
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final langProvider = Provider.of<LanguageProvider>(context);
+    bool isAr = langProvider.locale.languageCode == 'ar';
+
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Drawer(
-        // ضبط العرض ليكون في الجنب فقط
         width: MediaQuery.of(context).size.width * 0.82,
-        backgroundColor: const Color(0xFFF8F9FD), // خلفية رمادية فاتحة جداً لإبراز الخانات
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           children: [
-            // 1. [الهيدر الفخم]
-            _buildHeader(),
+            // 1. الهيدر الفخم
+            _buildHeader(isAr),
 
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  // ── الخانة الأولى: الأمان ──
-                  _sectionTitle("الأمان والحساب"),
+                  // ── قسم المظهر واللغة ──
+                  _sectionTitle(isAr ? "المظهر واللغة" : "Appearance & Language"),
                   _buildSectionCard([
-                    _buildMenuItem(context, Icons.lock_reset_rounded, "تغيير كلمة المرور",
-                            () => _showChangePasswordModal(context)),
+                    SwitchListTile(
+                      activeColor: AppColors.primaryBlue,
+                      title: Text(isAr ? "الوضع الليلي" : "Dark Mode",
+                          style: GoogleFonts.tajawal(fontWeight: FontWeight.w600, fontSize: 14)),
+                      secondary: Icon(
+                        themeProvider.themeMode == ThemeMode.dark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                        color: AppColors.primaryBlue,
+                      ),
+                      value: themeProvider.themeMode == ThemeMode.dark,
+                      onChanged: (bool value) => themeProvider.toggleTheme(value),
+                    ),
+                    const Divider(height: 1, indent: 20, endIndent: 20),
+                    ListTile(
+                      leading: const Icon(Icons.language_rounded, color: AppColors.primaryBlue),
+                      title: Text(isAr ? "لغة التطبيق" : "App Language",
+                          style: GoogleFonts.tajawal(fontWeight: FontWeight.w600, fontSize: 14)),
+                      trailing: Text(isAr ? "العربية" : "English",
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
+                      onTap: () => langProvider.changeLanguage(isAr ? 'en' : 'ar'),
+                    ),
                   ]),
 
                   const SizedBox(height: 25),
 
-                  // ── الخانة الثانية: التنبيهات ──
-                  _sectionTitle("التواصل"),
+                  // ── قسم الأمان ──
+                  _sectionTitle(isAr ? "الأمان والحساب" : "Security & Account"),
                   _buildSectionCard([
-                    _buildMenuItem(context, Icons.notifications_active_outlined, "مركز الإشعارات",
+                    _buildMenuItem(context, Icons.lock_reset_rounded, isAr ? "تغيير كلمة المرور" : "Change Password",
+                            () => _showChangePasswordModal(context, isAr)),
+                  ]),
+
+                  const SizedBox(height: 25),
+
+                  // ── قسم التواصل ──
+                  _sectionTitle(isAr ? "التواصل" : "Communication"),
+                  _buildSectionCard([
+                    _buildMenuItem(context, Icons.notifications_active_outlined, isAr ? "مركز الإشعارات" : "Notifications",
                             () => Navigator.push(context, MaterialPageRoute(builder: (c) => const NotificationsScreen()))),
                   ]),
 
                   const SizedBox(height: 25),
 
-                  // ── الخانة الثالثة: الدعم والقوانين ──
-                  _sectionTitle("الدعم والمعلومات"),
+                  // ── قسم الدعم ──
+                  _sectionTitle(isAr ? "الدعم والمعلومات" : "Support & Info"),
                   _buildSectionCard([
-                    _buildMenuItem(context, Icons.support_agent_rounded, "الدعم والشكاوى",
+                    _buildMenuItem(context, Icons.support_agent_rounded, isAr ? "الدعم والشكاوى" : "Complaints",
                             () => Navigator.push(context, MaterialPageRoute(builder: (c) => const ComplaintsScreen()))),
-                    const Divider(height: 1, indent: 50), // خط فاصل بسيط داخل الخانة
-                    _buildMenuItem(context, Icons.privacy_tip_outlined, "سياسة الخصوصية",
+                    const Divider(height: 1, indent: 50),
+                    _buildMenuItem(context, Icons.privacy_tip_outlined, isAr ? "سياسة الخصوصية" : "Privacy Policy",
                             () => Navigator.push(context, MaterialPageRoute(builder: (c) => const PrivacyPolicyScreen()))),
                   ]),
                 ],
               ),
             ),
 
-            // 3. [زر تسجيل الخروج]
-            _buildLogoutButton(context),
+            // 3. زر تسجيل الخروج
+            _buildLogoutButton(context, isAr),
             const SizedBox(height: 30),
           ],
         ),
@@ -77,7 +111,7 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
     );
   }
 
-  Widget _buildHeader() => Container(
+  Widget _buildHeader(bool isAr) => Container(
     width: double.infinity,
     padding: const EdgeInsets.fromLTRB(20, 80, 20, 40),
     decoration: const BoxDecoration(
@@ -92,17 +126,16 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
             backgroundColor: Colors.white24,
             child: Icon(Icons.person_outline_rounded, color: Colors.white, size: 30)),
         const SizedBox(height: 20),
-        Text("إعدادات الحساب",
+        Text(isAr ? "إعدادات الحساب" : "Account Settings",
             style: GoogleFonts.tajawal(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-        const Text("إدارة الخصوصية والأمان", style: TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(isAr ? "إدارة الخصوصية والمظهر" : "Manage Privacy & Theme", style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     ),
   );
 
-  // ويدجت لبناء "الخانة" (الكرت الأبيض المحيط بالخيارات)
   Widget _buildSectionCard(List<Widget> children) => Container(
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(20),
       boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
     ),
@@ -116,7 +149,9 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
 
   Widget _buildMenuItem(BuildContext context, IconData icon, String title, VoidCallback onTap) => ListTile(
     onTap: () {
-      if (title != "تغيير كلمة المرور") Navigator.pop(context);
+      if (title != (Provider.of<LanguageProvider>(context, listen: false).locale.languageCode == 'ar' ? "تغيير كلمة المرور" : "Change Password")) {
+        Navigator.pop(context);
+      }
       onTap();
     },
     leading: Icon(icon, color: AppColors.primaryBlue, size: 22),
@@ -125,12 +160,12 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
   );
 
-  Widget _buildLogoutButton(BuildContext context) => Padding(
+  Widget _buildLogoutButton(BuildContext context, bool isAr) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 20),
     child: ElevatedButton.icon(
-      onPressed: () => _showLogoutDialog(context),
+      onPressed: () => _showLogoutDialog(context, isAr),
       icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
-      label: Text("تسجيل الخروج", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
+      label: Text(isAr ? "تسجيل الخروج" : "Logout", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.redAccent.shade400,
         minimumSize: const Size(double.infinity, 55),
@@ -140,8 +175,7 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
     ),
   );
 
-  // نافذة تغيير الباسوورد
-  void _showChangePasswordModal(BuildContext context) {
+  void _showChangePasswordModal(BuildContext context, bool isAr) {
     final oldP = TextEditingController();
     final newP = TextEditingController();
     final confirmP = TextEditingController();
@@ -152,17 +186,17 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
       builder: (c) => StatefulBuilder(
         builder: (context, setModalState) => Container(
           padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom + 20, left: 25, right: 25, top: 20),
-          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(40))),
+          decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(40))),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
               const SizedBox(height: 25),
-              Text("تحديث كلمة المرور", style: GoogleFonts.tajawal(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(isAr ? "تحديث كلمة المرور" : "Update Password", style: GoogleFonts.tajawal(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 25),
-              _passInput("الحالية", oldP, _isObscureOld, () => setModalState(() => _isObscureOld = !_isObscureOld)),
-              _passInput("الجديدة", newP, _isObscureNew, () => setModalState(() => _isObscureNew = !_isObscureNew)),
-              _passInput("تأكيد الجديدة", confirmP, _isObscureConfirm, () => setModalState(() => _isObscureConfirm = !_isObscureConfirm)),
+              _passInput(isAr ? "الحالية" : "Current", oldP, _isObscureOld, () => setModalState(() => _isObscureOld = !_isObscureOld)),
+              _passInput(isAr ? "الجديدة" : "New", newP, _isObscureNew, () => setModalState(() => _isObscureNew = !_isObscureNew)),
+              _passInput(isAr ? "تأكيد الجديدة" : "Confirm New", confirmP, _isObscureConfirm, () => setModalState(() => _isObscureConfirm = !_isObscureConfirm)),
               const SizedBox(height: 25),
               SizedBox(
                 width: double.infinity,
@@ -174,7 +208,7 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
                       Navigator.pop(c);
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, shape: const StadiumBorder()),
-                    child: const Text("تحديث الآن", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                    child: Text(isAr ? "تحديث الآن" : "Update Now", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
               ),
               const SizedBox(height: 15),
             ],
@@ -194,11 +228,11 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
             prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primaryBlue),
             suffixIcon: IconButton(icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, color: Colors.grey), onPressed: onToggle),
             filled: true,
-            fillColor: const Color(0xFFF8F9FD),
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none))),
   );
 
-  void _showLogoutDialog(BuildContext context) {
+  void _showLogoutDialog(BuildContext context, bool isAr) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -208,20 +242,19 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
           children: [
             const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 50),
             const SizedBox(height: 15),
-            const Text("هل تود تسجيل الخروج فعلاً؟", textAlign: TextAlign.center),
+            Text(isAr ? "هل تود تسجيل الخروج فعلاً؟" : "Are you sure you want to logout?", textAlign: TextAlign.center),
             const SizedBox(height: 25),
             Row(children: [
-              Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: const Text("إلغاء"))),
+              Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text(isAr ? "إلغاء" : "Cancel"))),
               const SizedBox(width: 10),
               Expanded(
                   child: ElevatedButton(
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                       onPressed: () async {
-                        try { await ApiService().logout(); } catch (e) {}
                         await TokenManager.clearToken();
                         Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (c) => const LoginScreen()), (r) => false);
                       },
-                      child: const Text("خروج", style: TextStyle(color: Colors.white)))),
+                      child: Text(isAr ? "خروج" : "Exit", style: const TextStyle(color: Colors.white)))),
             ]),
           ],
         ),

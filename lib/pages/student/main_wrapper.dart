@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../core/ui/app_color.dart';
 import '../../core/token_manager.dart';
+import '../../core/theme/language_provider.dart';
 import '../../widgets/side_bar.dart';
 import 'applications/applications_screen.dart';
 import 'explore/explore_screen.dart';
 import 'internship/internship_screen.dart';
-import 'profile/profile_screen.dart' hide StudentHomeScreen;
+import 'profile/profile_screen.dart';
 import '../../widgets/floating_nav_bar.dart';
 import 'student_home_screen.dart';
 
@@ -28,6 +30,10 @@ class _MainWrapperState extends State<MainWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
+    bool isAr = langProvider.locale.languageCode == 'ar';
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     final List<Widget> pages = [
       StudentHomeScreen(onSeeAllPressed: () => _jumpToTab(1)),
       const ExploreScreen(),
@@ -37,65 +43,41 @@ class _MainWrapperState extends State<MainWrapper> {
     ];
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FD),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
-        endDrawer: _currentIndex == 4 ? const StudentSettingsSideBar() : null,
+        endDrawer: (_currentIndex == 4) ? const StudentSettingsSideBar() : null,
 
         appBar: AppBar(
-          backgroundColor: AppColors.primaryBlue,
+          backgroundColor: isDark ? const Color(0xFF1E293B) : AppColors.primaryBlue,
           elevation: 0,
           centerTitle: true,
+
+          automaticallyImplyLeading: false,
+
           actions: [
             if (_currentIndex == 4)
               Builder(builder: (context) {
                 return IconButton(
-                  icon: const Icon(Icons.settings, color: Colors.white),
-                  onPressed: () => Scaffold.of(context).openEndDrawer(),
+                  icon: const Icon(Icons.settings_outlined, color: Colors.white),
+                  onPressed: () {
+                    Scaffold.of(context).openEndDrawer();
+                  },
                 );
-              })
+              }),
+            const SizedBox(width: 10),
           ],
+
           title: _currentIndex == 0
-              ? Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('مرحباً بك،', style: GoogleFonts.tajawal(fontSize: 11, color: Colors.white70)),
-                  FutureBuilder<String?>(
-                    future: TokenManager.getName(),
-                    builder: (context, snapshot) {
-                      String name = snapshot.data ?? "جارِ التحميل..";
-                      return Text(
-                          name,
-                          style: GoogleFonts.tajawal(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)
-                      );
-                    },
-                  ),
-                ],
-              ),
-              Container(
-                height: 42, width: 42,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24, width: 1.5)
-                ),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.business, color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          )
+              ? _buildHomeHeader(isAr)
               : Text(
-              _getPageTitle(),
-              style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)
+              _getPageTitle(isAr),
+              style: GoogleFonts.tajawal(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17
+              )
           ),
         ),
 
@@ -109,12 +91,52 @@ class _MainWrapperState extends State<MainWrapper> {
     );
   }
 
-  String _getPageTitle() {
+  Widget _buildHomeHeader(bool isAr) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(isAr ? 'مرحباً بك،' : 'Welcome,',
+                style: GoogleFonts.tajawal(fontSize: 11, color: Colors.white70)),
+            FutureBuilder<String?>(
+              future: TokenManager.getName(),
+              builder: (context, snapshot) {
+                String name = snapshot.data ?? (isAr ? "تحميل.." : "Loading..");
+                return Text(
+                    name,
+                    style: GoogleFonts.tajawal(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)
+                );
+              },
+            ),
+          ],
+        ),
+        Container(
+          height: 38, width: 38,
+          decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white24, width: 1.5)
+          ),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/logo.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.account_circle, color: Colors.white, size: 25),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getPageTitle(bool isAr) {
     switch (_currentIndex) {
-      case 1: return "استكشاف الفرص";
-      case 2: return "تدريبي الحالي";
-      case 3: return "طلبات التقديم";
-      case 4: return "ملفي الشخصي";
+      case 1: return isAr ? "استكشاف الفرص" : "Explore Opportunities";
+      case 2: return isAr ? "تدريبي الحالي" : "My Internship";
+      case 3: return isAr ? "طلبات التقديم" : "Applications";
+      case 4: return isAr ? "ملفي الشخصي" : "My Profile";
       default: return "";
     }
   }

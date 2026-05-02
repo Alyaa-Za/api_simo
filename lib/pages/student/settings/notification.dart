@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/api/api_s.dart';
 import '../../../core/ui/app_color.dart';
+import '../../../core/theme/language_provider.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // جلب حالة اللغة والوضع الليلي
+    final langProvider = Provider.of<LanguageProvider>(context);
+    bool isAr = langProvider.locale.languageCode == 'ar';
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F7FF),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+            icon: Icon(isAr ? Icons.arrow_back_ios_new_rounded : Icons.arrow_forward_ios_rounded, color: Colors.white, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text("مركز التنبيهات",
+          title: Text(isAr ? "مركز التنبيهات" : "Notifications Center",
               style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
           centerTitle: true,
           elevation: 0,
@@ -33,7 +40,7 @@ class NotificationsScreen extends StatelessWidget {
             final notifications = snapshot.data ?? [];
 
             if (notifications.isEmpty) {
-              return _buildEmptyState();
+              return _buildEmptyState(isAr, isDark);
             }
 
             return ListView.builder(
@@ -43,7 +50,7 @@ class NotificationsScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final item = notifications[index];
 
-                final String title = item['data']?['title'] ?? "تنبيه جديد";
+                final String title = item['data']?['title'] ?? (isAr ? "تنبيه جديد" : "New Notification");
                 final String message = item['data']?['message'] ?? item['message'] ?? "";
                 final bool isRead = item['read_at'] != null || item['is_read'] == 1;
                 final String time = item['created_at']?.toString().substring(0, 10) ?? "";
@@ -51,23 +58,30 @@ class NotificationsScreen extends StatelessWidget {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 15),
                   decoration: BoxDecoration(
-                    color: isRead ? Colors.white.withOpacity(0.8) : Colors.white,
+                    color: isDark
+                        ? (isRead ? Colors.black12 : const Color(0xFF1E293B))
+                        : (isRead ? Colors.white.withOpacity(0.8) : Colors.white),
                     borderRadius: BorderRadius.circular(25),
+                    border: Border.all(
+                        color: isDark
+                            ? (isRead ? Colors.white10 : Colors.white.withOpacity(0.08))
+                            : (isRead ? Colors.transparent : AppColors.primaryBlue.withOpacity(0.1)),
+                        width: 1
+                    ),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(isRead ? 0.01 : 0.04),
+                          color: Colors.black.withOpacity(isDark ? 0.2 : (isRead ? 0.01 : 0.04)),
                           blurRadius: 15,
                           offset: const Offset(0, 8)
                       )
                     ],
-                    border: isRead ? null : Border.all(color: AppColors.primaryBlue.withOpacity(0.1), width: 1),
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(15),
                     leading: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isRead ? Colors.grey.withOpacity(0.1) : AppColors.primaryBlue.withOpacity(0.1),
+                        color: isRead ? Colors.grey.withOpacity(0.1) : AppColors.primaryBlue.withOpacity(0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -81,7 +95,7 @@ class NotificationsScreen extends StatelessWidget {
                       style: GoogleFonts.tajawal(
                         fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
                         fontSize: 15,
-                        color: isRead ? Colors.black54 : AppColors.textDark,
+                        color: isDark ? (isRead ? Colors.white38 : Colors.white) : (isRead ? Colors.black54 : AppColors.textDark),
                       ),
                     ),
                     subtitle: Column(
@@ -90,14 +104,18 @@ class NotificationsScreen extends StatelessWidget {
                         const SizedBox(height: 5),
                         Text(
                           message,
-                          style: GoogleFonts.tajawal(fontSize: 13, color: isRead ? Colors.grey : Colors.blueGrey, height: 1.4),
+                          style: GoogleFonts.tajawal(
+                              fontSize: 13,
+                              color: isDark ? Colors.white60 : (isRead ? Colors.grey : Colors.blueGrey),
+                              height: 1.4
+                          ),
                         ),
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade400),
+                            Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade500),
                             const SizedBox(width: 5),
-                            Text(time, style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                            Text(time, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                           ],
                         ),
                       ],
@@ -112,20 +130,26 @@ class NotificationsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isAr, bool isDark) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(30),
-            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20)]),
-            child: Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey.shade300),
+            decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20)]
+            ),
+            child: Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey.withOpacity(0.4)),
           ),
           const SizedBox(height: 25),
-          Text("صندوق الإشعارات فارغ", style: GoogleFonts.tajawal(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(isAr ? "صندوق الإشعارات فارغ" : "Notification box is empty",
+              style: GoogleFonts.tajawal(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 8),
-          Text("سيتم إعلامك فور وجود تحديثات جديدة", style: GoogleFonts.tajawal(color: Colors.grey.shade400, fontSize: 13)),
+          Text(isAr ? "سيتم إعلامك فور وجود تحديثات جديدة" : "You will be notified when there are new updates",
+              style: GoogleFonts.tajawal(color: Colors.grey.shade500, fontSize: 13)),
         ],
       ),
     );

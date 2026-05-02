@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../../core/ui/app_color.dart';
 import '../../../core/api/api_s.dart';
+import '../../../core/theme/language_provider.dart';
 
 class InstitutionProfile extends StatefulWidget {
   final Map<String, dynamic>? profile;
@@ -24,7 +26,7 @@ class _InstitutionProfileState extends State<InstitutionProfile> {
   final _webCtrl = TextEditingController();
   final _personCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  String _registerNum = "جاري التحميل...";
+  String _registerNum = "...";
 
   @override
   void initState() {
@@ -32,16 +34,22 @@ class _InstitutionProfileState extends State<InstitutionProfile> {
     _loadDataFromApi();
   }
 
+  String _cleanUrl(String? url) {
+    if (url == null || url.isEmpty) return "";
+    const String realLiveServer = "https://aladdiniot.com";
+    String finalUrl = url;
+    if (finalUrl.startsWith('http')) return finalUrl.replaceFirst('http://', 'https://');
+    if (finalUrl.startsWith('/')) finalUrl = finalUrl.substring(1);
+    if (!finalUrl.startsWith('storage/')) finalUrl = "storage/$finalUrl";
+    return "$realLiveServer/$finalUrl";
+  }
+
   Future<void> _loadDataFromApi() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-
     try {
       final res = await ApiService().getInstitutionProfile();
-
-      debugPrint("Full API Response: $res");
-
-      final data = res['data']?['institution'] ?? res['data'] ?? res['institution'] ?? {};
+      final data = res['data']?['institution'] ?? res['data'] ?? {};
 
       if (data.isNotEmpty) {
         setState(() {
@@ -51,185 +59,205 @@ class _InstitutionProfileState extends State<InstitutionProfile> {
           _webCtrl.text = (data['website'] ?? "").toString();
           _personCtrl.text = (data['contact_person'] ?? "").toString();
           _phoneCtrl.text = (data['contact_phone'] ?? "").toString();
-          _registerNum = (data['commercial_register'] ?? "غير متوفر").toString();
-
-          _serverLogoUrl = data['profile_picture_url'] ?? data['logo_url'];
+          _registerNum = (data['commercial_register'] ?? "N/A").toString();
+          _serverLogoUrl = _cleanUrl(data['profile_picture_url'] ?? data['logo_url']);
         });
       }
     } catch (e) {
-      debugPrint("❌ فشل جلب البيانات من السيرفر: $e");
+      debugPrint("Error: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _pickAndUploadLogo() async {
-    final img = await ImagePicker().pickImage(source: ImageSource.gallery);
+  Future<void> _handleSave(bool isAr) async {
+    setState(() => _isLoading = true);
+    try {
+      Map<String, dynamic> data = {
+        "name": _nameCtrl.text,
+        "address": _addressCtrl.text,
+        "description": _descCtrl.text,
+        "website": _webCtrl.text,
+        "contact_person": _personCtrl.text,
+        "contact_phone": _phoneCtrl.text,
+        "_method": "PATCH",
+      };
+
+      await ApiService().updateInstitutionProfile(data);
+      await _loadDataFromApi();
+      _showSnack(isAr ? "تم حفظ التعديلات بنجاح" : "Saved successfully", Colors.green);
+    } catch (e) {
+      _showSnack(isAr ? "فشل الحفظ: $e" : "Save failed: $e", Colors.red);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickAndUploadLogo(bool isAr) async {
+    final img = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 50);
     if (img != null) {
       setState(() => _selectedLogo = File(img.path));
       try {
         await ApiService().uploadInstitutionLogo(img.path);
         await _loadDataFromApi();
-        _showSnack("تم حفظ الشعار في ملفك الشخصي ", Colors.green);
+        _showSnack(isAr ? "تم تحديث الشعار" : "Logo updated ", Colors.green);
       } catch (e) {
-        _showSnack("فشل رفع وحفظ الشعار", Colors.red);
+        _showSnack(isAr ? "فشل رفع الشعار" : "Logo upload failed", Colors.red);
       }
     }
   }
 
-  String _formatUrl(String url) {
-    if (url.isEmpty) return url;
-    String trimmed = url.trim();
-    if (!trimmed.startsWith('http')) {
-      return 'https://$trimmed';
-    }
-    return trimmed;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            _buildLogoHeader(),
-            const SizedBox(height: 30),
+    final langProvider = Provider.of<LanguageProvider>(context);
+    bool isAr = langProvider.locale.languageCode == 'ar';
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-            _sectionTitle("معلومات المنشأة"),
-            _buildCard([
-              _buildField("اسم المؤسسة", _nameCtrl, Icons.business_rounded),
-              const Divider(height: 1),
-              _buildField("الموقع / العنوان", _addressCtrl, Icons.location_on_outlined),
-              const Divider(height: 1),
-              _buildField("نبذة تعريفية", _descCtrl, Icons.description_outlined, maxLines: 3),
-              const Divider(height: 1),
-              _buildField("الموقع الإلكتروني", _webCtrl, Icons.language_rounded),
-            ]),
+    return Directionality(
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              _buildLogoHeader(isAr, isDark),
+              const SizedBox(height: 30),
 
-            const SizedBox(height: 25),
-            _sectionTitle("بيانات التواصل"),
-            _buildCard([
-              _buildField("اسم مسؤول التواصل", _personCtrl, Icons.person_pin_outlined),
-              const Divider(height: 1),
-              _buildField("رقم هاتف التواصل", _phoneCtrl, Icons.phone_android_rounded),
-            ]),
+              _sectionTitle(isAr ? "معلومات المنشأة" : "Entity Information", isAr),
+              _buildCard([
+                _buildField(isAr ? "اسم المؤسسة" : "Institution Name", _nameCtrl, Icons.business_rounded, isDark),
+                _buildField(isAr ? "الموقع / العنوان" : "Location", _addressCtrl, Icons.location_on_outlined, isDark),
+                _buildField(isAr ? "نبذة تعريفية" : "Bio", _descCtrl, Icons.description_outlined, isDark, maxLines: 3),
+                _buildField(isAr ? "الموقع الإلكتروني" : "Website", _webCtrl, Icons.language_rounded, isDark),
+              ], isDark),
 
-            const SizedBox(height: 25),
-            _sectionTitle("بيانات التوثيق"),
-            _buildCard([
-              _buildReadOnlyField("رقم السجل التجاري", _registerNum, Icons.verified_user_outlined),
-            ]),
+              const SizedBox(height: 25),
+              _sectionTitle(isAr ? "بيانات التواصل" : "Contact", isAr),
+              _buildCard([
+                _buildField(isAr ? "اسم مسؤول التواصل" : "Contact Person", _personCtrl, Icons.person_pin_outlined, isDark),
+                _buildField(isAr ? "رقم الهاتف" : "Phone", _phoneCtrl, Icons.phone_android_rounded, isDark),
+              ], isDark),
 
-            const SizedBox(height: 40),
-            _buildSaveButton(),
-          ],
+              const SizedBox(height: 25),
+              _sectionTitle(isAr ? "التوثيق" : "Verification", isAr),
+              _buildCard([
+                _buildReadOnlyField(isAr ? "رقم السجل التجاري" : "CR Number", _registerNum, Icons.verified_user_outlined, isDark),
+              ], isDark),
+
+              const SizedBox(height: 40),
+              _buildSaveButton(isAr),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildLogoHeader() {
+  Widget _buildLogoHeader(bool isAr, bool isDark) {
     return Stack(
       alignment: Alignment.bottomRight,
       children: [
         Container(
-          width: 125, height: 125,
+          width: 130, height: 130,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: AppColors.primaryBlue.withOpacity(0.1), width: 5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15)],
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            border: Border.all(color: AppColors.primaryBlue.withOpacity(0.2), width: 5),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15)],
           ),
           child: ClipOval(
             child: _selectedLogo != null
                 ? Image.file(_selectedLogo!, fit: BoxFit.cover)
                 : (_serverLogoUrl != null && _serverLogoUrl!.isNotEmpty)
-                ? Image.network(_serverLogoUrl!, fit: BoxFit.cover, errorBuilder: (c, e, s) => _buildPlaceholder())
-                : _buildPlaceholder(),
+                ? Image.network(_serverLogoUrl!, fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => _buildPlaceholder(isDark))
+                : _buildPlaceholder(isDark),
           ),
         ),
         GestureDetector(
-          onTap: _pickAndUploadLogo,
+          onTap: () => _pickAndUploadLogo(isAr),
           child: const CircleAvatar(
-            radius: 18, backgroundColor: Colors.orange,
-            child: Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),
+            radius: 20, backgroundColor: Colors.orange,
+            child: Icon(Icons.camera_alt_rounded, size: 20, color: Colors.white),
           ),
         )
       ],
     );
   }
 
-  Widget _buildPlaceholder() => Container(
-    color: const Color(0xFFF1F4F8),
-    child: const Icon(Icons.business_rounded, size: 55, color: Color(0xFFB0BCC7)),
+  Widget _buildPlaceholder(bool isDark) => Container(
+    color: isDark ? Colors.white10 : const Color(0xFFF1F4F8),
+    child: Icon(Icons.business_rounded, size: 55, color: isDark ? Colors.white24 : const Color(0xFFB0BCC7)),
   );
 
-  Widget _buildField(String label, TextEditingController ctrl, IconData icon, {int maxLines = 1}) {
+  Widget _buildField(String label, TextEditingController ctrl, IconData icon, bool isDark, {int maxLines = 1}) {
     return TextFormField(
       controller: ctrl, maxLines: maxLines,
-      style: GoogleFonts.tajawal(fontSize: 14, fontWeight: FontWeight.w600),
+      style: GoogleFonts.tajawal(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87),
       decoration: InputDecoration(
         labelText: label, labelStyle: const TextStyle(fontSize: 12, color: Colors.grey),
         prefixIcon: Icon(icon, color: AppColors.primaryBlue, size: 20),
-        border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
       ),
     );
   }
 
-  Widget _buildReadOnlyField(String label, String value, IconData icon) {
+  Widget _buildReadOnlyField(String label, String value, IconData icon, bool isDark) {
     return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Colors.grey),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+      leading: Icon(icon, color: Colors.grey, size: 20),
       title: Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-      subtitle: Text(value, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, color: Colors.black87)),
+      subtitle: Text(value, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
       trailing: const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
     );
   }
 
-  Widget _buildCard(List<Widget> children) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
+  Widget _buildCard(List<Widget> children, bool isDark) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      borderRadius: BorderRadius.circular(25),
+      border: isDark ? Border.all(color: Colors.white10) : null,
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.02), blurRadius: 10)],
+    ),
     child: Column(children: children),
   );
 
-  Widget _sectionTitle(String title) => Align(
-    alignment: Alignment.centerRight,
-    child: Padding(padding: const EdgeInsets.only(right: 10, bottom: 8), child: Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryBlue))),
+  Widget _sectionTitle(String title, bool isAr) => Align(
+    alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+    child: Padding(padding: const EdgeInsets.only(right: 10, left: 10, bottom: 10),
+        child: Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryBlue))),
   );
 
-  Widget _buildSaveButton() => SizedBox(
+  Widget _buildSaveButton(bool isAr) => Container(
     width: double.infinity, height: 60,
+    decoration: BoxDecoration(
+        gradient: AppColors.buttonGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))]
+    ),
     child: ElevatedButton(
-      onPressed: () async {
-        setState(() => _isLoading = true);
-        try {
-          await ApiService().updateInstitutionProfile({
-            "name": _nameCtrl.text,
-            "address": _addressCtrl.text,
-            "description": _descCtrl.text,
-            "website": _formatUrl(_webCtrl.text),
-            "contact_person": _personCtrl.text,
-            "contact_phone": _phoneCtrl.text,
-          });
-          await _loadDataFromApi();
-          _showSnack("تم حفظ التعديلات في قاعدة البيانات بنجاح ✅", Colors.green);
-        } catch (e) {
-          _showSnack("فشل الحفظ: تأكد من الاتصال بالإنترنت", Colors.red);
-        } finally {
-          setState(() => _isLoading = false);
-        }
-      },
-      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), elevation: 0),
-      child: Text("حفظ التغييرات", style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+      onPressed: _isLoading ? null : () => _handleSave(isAr),
+      style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
+      ),
+      child: _isLoading
+          ? const CircularProgressIndicator(color: Colors.white)
+          : Text(isAr ? "حفظ التعديلات النهائية " : "Save Changes ",
+          style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
     ),
   );
 
   void _showSnack(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
+      backgroundColor: color, behavior: SnackBarBehavior.floating,
+    ));
   }
 }

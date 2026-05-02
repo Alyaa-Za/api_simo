@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/ui/app_color.dart';
+import '../../../core/theme/language_provider.dart';
 import 'institution_home_screen.dart';
 import 'opportunities/manage_opportunities.dart';
 import 'applicants/applicant_request.dart';
@@ -13,24 +15,21 @@ class InstitutionMainWrapper extends StatefulWidget {
   const InstitutionMainWrapper({super.key, this.profile});
 
   @override
-  State<InstitutionMainWrapper> createState() =>
-      _InstitutionMainWrapperState();
+  State<InstitutionMainWrapper> createState() => InstitutionMainWrapperState();
 }
 
-class _InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
+class InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
   int _currentIndex = 0;
-
-  bool _showSettings = false;
-
   late final List<Widget> _pages;
+
+  void jumpToTab(int index) {
+    setState(() => _currentIndex = index);
+  }
 
   @override
   void initState() {
     super.initState();
-
-    final String currentStatus =
-        widget.profile?['status'] ?? 'pending_approval';
-
+    final String currentStatus = widget.profile?['status'] ?? 'pending_approval';
     _pages = [
       const InstitutionDashboard(),
       ManageOpportunities(accountStatus: currentStatus),
@@ -42,163 +41,95 @@ class _InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
+    bool isAr = langProvider.locale.languageCode == 'ar';
+
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FD),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
-        appBar: _buildAppBar(),
-
-        body: Stack(
-          children: [
-            IndexedStack(
-              index: _currentIndex,
-              children: _pages,
-            ),
-
-            _buildFloatingNavBar(),
-
-            if (_showSettings)
-              GestureDetector(
-                onTap: () => setState(() => _showSettings = false),
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 200),
-                  opacity: _showSettings ? 1 : 0,
-                  child: Container(
-                    color: Colors.black54,
-                  ),
-                ),
-              ),
-
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeOutCubic,
-
-              left: _showSettings
-                  ? 0
-                  : -MediaQuery.of(context).size.width * 0.85,
-
-              top: 0,
-              bottom: 0,
-
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.85,
-                child: Material(
-                  color: Colors.white,
-                  elevation: 20,
-                  child: const InstitutionSettings(),
-                ),
-              ),
-            ),
-          ],
+        // القائمة الجانبية مَسْطرة ملان العين
+        endDrawer: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.85,
+          child: const InstitutionSettings(),
         ),
-      ),
-    );
-  }
 
-  PreferredSizeWidget _buildAppBar() {
-    bool isHome = _currentIndex == 0;
-    bool isProfile = _currentIndex == 4;
+        appBar: AppBar(
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          centerTitle: true,
 
-    return AppBar(
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      centerTitle: false,
+          // ── [تثبيت اللون الأزرق مَسْطرة] ──
+          // حذفنا شرط isDark لكي يظل التدرج اللوني ثابتاً في كل الأوضاع
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: AppColors.splashGradient, // يظل أزرق دائماً كما طلبتِ
+            ),
+          ),
 
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.splashGradient,
-        ),
-      ),
-
-      title: SizedBox(
-        width: double.infinity,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                height: 38,
-                width: 38,
-                decoration: BoxDecoration(
+          // أيقونة اللوجو (تظهر في الهوم فقط)
+          leading: _currentIndex == 0
+              ? Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Container(
+              decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white24, width: 1.5),
-                ),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                  border: Border.all(color: Colors.white24)
               ),
+              child: ClipOval(child: Image.asset('assets/images/logo.png', fit: BoxFit.cover)),
             ),
+          )
+              : null,
 
-            isHome
-                ? Text(
-              'مرحباً بك',
-              style: GoogleFonts.tajawal(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            )
-                : Text(
-              _getPageTitle(),
-              style: GoogleFonts.tajawal(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+          title: Text(
+            _currentIndex == 0 ? (isAr ? 'مرحباً بك' : 'Welcome') : _getPageTitle(isAr),
+            style: GoogleFonts.tajawal(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
 
-            if (isProfile)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.settings,
-                    color: Colors.white,
-                    size: 28,
-                  ),
+          actions: [
+            if (_currentIndex == 4)
+              Builder(
+                builder: (innerContext) => IconButton(
+                  icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 26),
                   onPressed: () {
-                    setState(() {
-                      _showSettings = true;
-                    });
+                    Scaffold.of(innerContext).openEndDrawer();
                   },
                 ),
               ),
+            const SizedBox(width: 10),
+          ],
+        ),
+
+        body: Stack(
+          children: [
+            IndexedStack(index: _currentIndex, children: _pages),
+            _buildFloatingNavBar(),
           ],
         ),
       ),
     );
   }
 
-  String _getPageTitle() {
+  String _getPageTitle(bool isAr) {
     switch (_currentIndex) {
-      case 1:
-        return "إدارة الفرص";
-      case 2:
-        return "طلبات المتقدمين";
-      case 3:
-        return "المتابعة والتقييم";
-      case 4:
-        return "الملف الشخصي";
-      default:
-        return "";
+      case 1: return isAr ? "إدارة الفرص" : "Opportunities";
+      case 2: return isAr ? "طلبات المتقدمين" : "Applications";
+      case 3: return isAr ? "المتابعة والتقييم" : "Evaluation";
+      case 4: return isAr ? "الملف الشخصي" : "My Profile";
+      default: return "";
     }
   }
 
   Widget _buildFloatingNavBar() {
     return Positioned(
-      bottom: 25,
-      left: 20,
-      right: 20,
+      bottom: 25, left: 20, right: 20,
       child: Container(
         height: 70,
         decoration: BoxDecoration(
-          gradient: AppColors.buttonGradient,
-          borderRadius: BorderRadius.circular(35),
+            gradient: AppColors.buttonGradient, // يظل التدرج الأزرق ثابتاً
+            borderRadius: BorderRadius.circular(35),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15)]
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -216,13 +147,15 @@ class _InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
 
   Widget _navItem(int index, IconData icon) {
     bool isSelected = _currentIndex == index;
-
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
-      child: Icon(
-        icon,
-        color: isSelected ? Colors.white : Colors.white60,
-        size: 28,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+            color: isSelected ? Colors.white.withOpacity(0.15) : Colors.transparent,
+            shape: BoxShape.circle
+        ),
+        child: Icon(icon, color: isSelected ? Colors.white : Colors.white60, size: 26),
       ),
     );
   }

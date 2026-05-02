@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/ui/app_color.dart';
 import '../../../core/api/api_s.dart';
+import '../../../core/theme/language_provider.dart';
 
 class OpportunityDetailScreen extends StatefulWidget {
   final dynamic opportunity;
@@ -13,7 +15,6 @@ class OpportunityDetailScreen extends StatefulWidget {
 
 class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
   bool _isChecking = false;
-  // قائمة لتخزين وحدات التحكم الخاصة بالأسئلة التي تضعها المؤسسة
   final List<TextEditingController> _customControllers = [];
 
   @override
@@ -24,8 +25,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
     super.dispose();
   }
 
-  // ── 1. فحص حالة الملف ──
-  Future<void> _handleApply() async {
+  Future<void> _handleApply(bool isAr) async {
     setState(() => _isChecking = true);
     try {
       final res = await ApiService().getProfile();
@@ -34,67 +34,70 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
       int percentage = int.tryParse(data['completion_percentage']?.toString() ?? '0') ?? 0;
 
       if (isComplete || percentage >= 100) {
-        _showDynamicQuestionsSheet(); // فتح نافذة الأسئلة الضخمة
+        _showDynamicQuestionsSheet(isAr);
       } else {
-        _showPremiumWarning(percentage);
+        _showPremiumWarning(percentage, isAr);
       }
     } catch (e) {
-      _showPremiumMessage("خطأ في الاتصال", "تعذر التحقق من حالة الملف الشخصي.", true);
+      _showSweetMessage(
+          title: isAr ? "خطأ في الاتصال" : "Connection Error",
+          msg: isAr ? "تعذر التحقق من حالة الملف الشخصي." : "Could not verify profile status.",
+          isError: true
+      );
     } finally {
       if (mounted) setState(() => _isChecking = false);
     }
   }
 
-  // ── 2. نافذة الأسئلة الضخمة (المطلوب تعديلها فقط) ──
-  void _showDynamicQuestionsSheet() {
-    // استخراج الأسئلة من بيانات الفرصة
+  void _showDynamicQuestionsSheet(bool isAr) {
     final dynamic rawQs = widget.opportunity['custom_questions'];
     List<String> questions = [];
-    if (rawQs is List) questions = List<String>.from(rawQs);
-    else if (rawQs is String && rawQs.isNotEmpty) questions = rawQs.split(',');
+    if (rawQs is List) {
+      questions = List<String>.from(rawQs);
+    } else if (rawQs is String && rawQs.isNotEmpty) questions = rawQs.split(',');
 
-    // تجهيز الـ Controllers
     _customControllers.clear();
     for (var i = 0; i < questions.length; i++) {
       _customControllers.add(TextEditingController());
     }
+
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
         child: Container(
           padding: EdgeInsets.only(
               bottom: MediaQuery.of(ctx).viewInsets.bottom + 30,
               left: 30, right: 30, top: 20
           ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(50)), // حواف ضخمة
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(50)),
           ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(10))),
+                Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
                 const SizedBox(height: 30),
                 const Icon(Icons.assignment_turned_in_rounded, size: 50, color: AppColors.primaryBlue),
                 const SizedBox(height: 15),
-                Text("متطلبات التقديم", style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.w900)),
-                const Text("يرجى الإجابة على أسئلة المؤسسة لإتمام الطلب", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(isAr ? "متطلبات التقديم" : "Application Requirements", style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.w900)),
+                Text(isAr ? "يرجى الإجابة على أسئلة المؤسسة لإتمام الطلب" : "Please answer the questions to complete your request", style: TextStyle(color: Colors.grey, fontSize: 12)),
                 const SizedBox(height: 30),
 
-                // توليد حقول الأسئلة ديناميكياً بتصميم "ضخم"
                 if (questions.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Text("لا توجد أسئلة إضافية، يمكنك التقديم مباشرة."),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(isAr ? "لا توجد أسئلة إضافية، يمكنك التقديم مباشرة." : "No extra questions, you can apply directly."),
                   )
                 else
                   ...List.generate(questions.length, (index) {
-                    return _buildLargeQuestionInput(questions[index].trim(), _customControllers[index]);
+                    return _buildLargeQuestionInput(questions[index].trim(), _customControllers[index], isAr, isDark);
                   }),
 
                 const SizedBox(height: 30),
@@ -104,20 +107,20 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                        child: const Text("إلغاء"),
+                        child: Text(isAr ? "إلغاء" : "Cancel"),
                       ),
                     ),
                     const SizedBox(width: 15),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => _submitWithAnswers(questions),
+                        onPressed: () => _submitWithAnswers(questions, isAr),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          elevation: 5,
+                          elevation: 0,
                         ),
-                        child: const Text("إرسال الطلب", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: Text(isAr ? "إرسال الطلب" : "Submit Request", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -131,21 +134,22 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
     );
   }
 
-  // ويدجت حقل السؤال الضخم
-  Widget _buildLargeQuestionInput(String label, TextEditingController ctrl) {
+  Widget _buildLargeQuestionInput(String label, TextEditingController ctrl, bool isAr, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textDark)),
+          Text(label, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white : AppColors.textDark)),
           const SizedBox(height: 10),
           TextField(
             controller: ctrl,
             maxLines: 3,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
             decoration: InputDecoration(
-              hintText: "اكتب إجابتك هنا...",
-              filled: true, fillColor: const Color(0xFFF8F9FD),
+              hintText: isAr ? "اكتب إجابتك هنا..." : "Type your answer here...",
+              filled: true,
+              fillColor: isDark ? Colors.black12 : const Color(0xFFF8F9FD),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
             ),
           ),
@@ -154,8 +158,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
     );
   }
 
-  // ── 3. إرسال الطلب الفعلي ──
-  Future<void> _submitWithAnswers(List<String> qs) async {
+  Future<void> _submitWithAnswers(List<String> qs, bool isAr) async {
     String msg = "";
     for (int i = 0; i < qs.length; i++) {
       msg += "${qs[i]}: ${_customControllers[i].text}\n";
@@ -168,43 +171,124 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
     setState(() => _isChecking = true);
     try {
       await ApiService().applyToOpportunity(oppId, msg, "تم التقديم عبر الجوال");
-      _showPremiumMessage("تم بنجاح!", "طلبك قيد المراجعة الآن ✅", false);
+      _showSweetMessage(
+          title: isAr ? "تم بنجاح!" : "Applied Successfully!",
+          msg: isAr ? "طلبك قيد المراجعة الآن " : "Your request is under review ✅",
+          isError: false
+      );
     } catch (e) {
-      _showPremiumMessage("فشل التقديم", e.toString(), true);
+      _showSweetMessage(
+          title: isAr ? "فشل التقديم" : "Application Failed",
+          msg: e.toString(),
+          isError: true
+      );
     } finally {
       if (mounted) setState(() => _isChecking = false);
     }
   }
 
+  void _showSweetMessage({required String title, required String msg, required bool isError}) {
+    showDialog(
+      context: context,
+      builder: (c) => Directionality(
+        textDirection: Provider.of<LanguageProvider>(context, listen: false).locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          backgroundColor: Theme.of(context).cardColor,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 15),
+              CircleAvatar(
+                radius: 35,
+                backgroundColor: isError ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                child: Icon(isError ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded, color: isError ? Colors.redAccent : Colors.green, size: 40),
+              ),
+              const SizedBox(height: 25),
+              Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18, color: Theme.of(context).textTheme.bodyLarge?.color)),
+              const SizedBox(height: 12),
+              Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.5)),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(c),
+                  style: ElevatedButton.styleFrom(backgroundColor: isError ? Colors.redAccent : AppColors.primaryBlue, shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(vertical: 12)),
+                  child: const Text("موافق", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showPremiumWarning(int p, bool isAr) {
+    showDialog(
+      context: context,
+      builder: (c) => Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          backgroundColor: Theme.of(context).cardColor,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 15),
+              const Icon(Icons.info_outline_rounded, size: 60, color: Colors.orange),
+              const SizedBox(height: 20),
+              Text(isAr ? "ملف غير مكتمل" : "Incomplete Profile", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18, color: Theme.of(context).textTheme.bodyLarge?.color)),
+              const SizedBox(height: 12),
+              Text(
+                isAr ? "ملفك الشخصي غير مكتمل ($p%). يجب إكمال البيانات الأكاديمية أولاً لتتمكن من التقديم."
+                    : "Your profile is incomplete ($p%). Please complete your academic data to apply.",
+                textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(c),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, shape: const StadiumBorder()),
+                child: Text(isAr ? "فهمت" : "Got it", style: const TextStyle(color: Colors.white)),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
+    bool isAr = langProvider.locale.languageCode == 'ar';
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     final opp = widget.opportunity;
+
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F7FF),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Stack(
           children: [
-            _buildPremiumHeaderBackground(),
+            _buildHeaderBg(),
             Padding(
               padding: const EdgeInsets.only(top: 60),
               child: Column(
                 children: [
-                  _buildTopBar(),
+                  _buildTopBar(isAr),
                   Expanded(
                     child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.all(25),
                       child: Column(
                         children: [
-                          _buildHeroCard(opp),
-                          const SizedBox(height: 25),
-                          _buildInfoCard("تاريخ بدء الدورة", opp['start_date'] ?? "يحدد لاحقاً", Icons.calendar_month, Colors.orange),
+                          _buildHeroCard(opp, isDark),
+                          const SizedBox(height: 20),
+                          _buildInfoCard(isAr ? "تاريخ البدء" : "Start Date", opp['start_date'] ?? (isAr ? "غير محدد" : "N/A"), Icons.calendar_today, Colors.orange, isDark),
                           const SizedBox(height: 15),
-                          _buildInfoCard("وصف التدريب", opp['description'] ?? "لا يوجد وصف", Icons.description_outlined, AppColors.primaryBlue),
+                          _buildInfoCard(isAr ? "الوصف" : "Description", opp['description'] ?? (isAr ? "لا يوجد وصف" : "No desc"), Icons.description, AppColors.primaryBlue, isDark),
                           const SizedBox(height: 15),
-                          _buildInfoCard("المتطلبات المهارية", opp['required_skills'] ?? opp['skills']?.toString() ?? "غير محددة", Icons.psychology_outlined, Colors.teal),
-                          const SizedBox(height: 120),
+                          _buildInfoCard(isAr ? "المتطلبات" : "Requirements", opp['required_skills'] ?? (isAr ? "غير محددة" : "N/A"), Icons.psychology, Colors.teal, isDark),
                         ],
                       ),
                     ),
@@ -212,18 +296,59 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
                 ],
               ),
             ),
-            Align(alignment: Alignment.bottomCenter, child: _buildApplyButtonWidget()),
+            Align(alignment: Alignment.bottomCenter, child: _buildApplyBtn(isAr)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPremiumHeaderBackground() => Container(height: MediaQuery.of(context).size.height * 0.35, decoration: const BoxDecoration(gradient: AppColors.splashGradient, borderRadius: BorderRadius.only(bottomLeft: Radius.circular(50), bottomRight: Radius.circular(50))));
-  Widget _buildTopBar() => Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Row(children: [IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20), onPressed: () => Navigator.pop(context)), Text("تفاصيل الفرصة", style: GoogleFonts.tajawal(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))]));
-  Widget _buildHeroCard(dynamic opp) => Container(width: double.infinity, padding: const EdgeInsets.all(25), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(35), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)]), child: Column(children: [Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: AppColors.primaryBlue.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.business_center, size: 40, color: AppColors.primaryBlue)), const SizedBox(height: 15), Text(opp['title'] ?? "", textAlign: TextAlign.center, style: GoogleFonts.tajawal(fontSize: 18, fontWeight: FontWeight.w900)), Text(opp['institution']?['name'] ?? "", style: const TextStyle(color: Colors.grey, fontSize: 14))]));
-  Widget _buildInfoCard(String title, String desc, IconData icon, Color color) => Container(width: double.infinity, margin: const EdgeInsets.only(bottom: 15), padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Icon(icon, size: 18, color: color), const SizedBox(width: 10), Text(title, style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 14))]), const SizedBox(height: 10), Text(desc, style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.6))]));
-  Widget _buildApplyButtonWidget() => Container(padding: const EdgeInsets.all(25), child: ElevatedButton(onPressed: _isChecking ? null : _handleApply, style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, minimumSize: const Size(double.infinity, 65), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))), child: _isChecking ? const CircularProgressIndicator(color: Colors.white) : Text("إرسال طلب الانضمام", style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))));
-  void _showPremiumMessage(String title, String msg, bool isError) { showDialog(context: context, builder: (c) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), title: Text(title, textAlign: TextAlign.center), content: Text(msg, textAlign: TextAlign.center), actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text("موافق"))])); }
-  void _showPremiumWarning(int p) { showDialog(context: context, builder: (c) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), title: const Icon(Icons.warning_amber_rounded, size: 50, color: Colors.orange), content: Text("ملفك غير مكتمل ($p%). أكمل بياناتك أولاً."), actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text("فهمت"))])); }
+  Widget _buildHeaderBg() => Container(height: 250, decoration: const BoxDecoration(gradient: AppColors.splashGradient, borderRadius: BorderRadius.vertical(bottom: Radius.circular(50))));
+
+  Widget _buildTopBar(bool isAr) => Row(children: [
+    IconButton(icon: Icon(isAr ? Icons.arrow_back_ios : Icons.arrow_forward_ios, color: Colors.white), onPressed: () => Navigator.pop(context)),
+    Text(isAr ? "تفاصيل الفرصة" : "Opportunity Details", style: GoogleFonts.tajawal(color: Colors.white, fontWeight: FontWeight.bold))
+  ]);
+
+  Widget _buildHeroCard(dynamic opp, bool isDark) => Container(
+    width: double.infinity, padding: const EdgeInsets.all(25),
+    decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        border: isDark ? Border.all(color: Colors.white10) : null,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.05), blurRadius: 20)]
+    ),
+    child: Column(children: [
+      const Icon(Icons.business_center, size: 40, color: AppColors.primaryBlue),
+      const SizedBox(height: 15),
+      Text(opp['title'] ?? "", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18, color: isDark ? Colors.white : AppColors.textDark)),
+      Text(opp['institution']?['name'] ?? "", style: const TextStyle(color: Colors.grey))
+    ]),
+  );
+
+  Widget _buildInfoCard(String t, String d, IconData i, Color c, bool isDark) => Container(
+    width: double.infinity, padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: isDark ? Border.all(color: Colors.white10) : null,
+    ),
+    child: Row(children: [
+      Icon(i, color: c),
+      const SizedBox(width: 15),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(t, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(d, style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87))
+      ]))
+    ]),
+  );
+
+  Widget _buildApplyBtn(bool isAr) => Container(
+      padding: const EdgeInsets.all(25),
+      child: ElevatedButton(
+          onPressed: _isChecking ? null : () => _handleApply(isAr),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, minimumSize: const Size(double.infinity, 60), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+          child: _isChecking ? const CircularProgressIndicator(color: Colors.white) : Text(isAr ? "إرسال طلب التقديم" : "Submit Application", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+      )
+  );
 }

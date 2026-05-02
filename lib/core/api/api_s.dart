@@ -334,18 +334,14 @@ class ApiService {
   Future<void> uploadProfilePhoto(String path) async {
     await loadToken();
 
-    // 1. نرسل الطلب كـ POST (هذه خدعة الـ Spoofing لضمان عمل الملفات)
     final request = http.MultipartRequest(
       'POST',
       _uri('/api/student/profile/photo'),
     );
 
     request.headers.addAll(_headers);
-
-    // 2. نخبر السيرفر أننا نقصد PATCH فعلياً (هذا ما يطلبه أغلب مبرمجي الباك أند)
     request.fields['_method'] = 'PATCH';
 
-    // 3. إضافة الملف
     request.files.add(
       await http.MultipartFile.fromPath('photo', path),
     );
@@ -393,7 +389,7 @@ class ApiService {
     required String title,
     required String content,
     required int weekNumber,
-    required String filePath, // المسار الجديد للملف المطلوب
+    required String filePath,
   }) async {
     await loadToken();
 
@@ -472,13 +468,8 @@ class ApiService {
   }
 
 
-  // ==============================
-// Institution API Calls (مصححة)
-// استبدل القسم كامل من getInstitutionProfile
-// إلى resendVerificationCode
-// ==============================
+// Institution
 
-// 1) جلب بيانات المؤسسة
   Future<Map<String, dynamic>> getInstitutionProfile() async {
     await loadToken();
 
@@ -490,7 +481,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 2) تحديث بيانات المؤسسة
   Future<Map<String, dynamic>> updateInstitutionProfile(
       Map<String, dynamic> body,
       ) async {
@@ -505,7 +495,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 3) رفع شعار المؤسسة
   Future<Map<String, dynamic>> uploadInstitutionLogo(String path) async {
     await loadToken();
 
@@ -515,6 +504,8 @@ class ApiService {
     );
 
     request.headers.addAll(_headers);
+    request.fields['_method'] = 'PATCH';
+
 
     request.files.add(
       await http.MultipartFile.fromPath('logo', path),
@@ -523,10 +514,11 @@ class ApiService {
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
 
+
     return Map<String, dynamic>.from(_handleResponse(response));
   }
 
-// 4) إحصائيات لوحة المؤسسة
+
   Future<Map<String, dynamic>> getInstitutionDashboardStats() async {
     await loadToken();
 
@@ -538,7 +530,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 5) الفرص الخاصة بالمؤسسة
   Future<List<dynamic>> getInstitutionOpportunities() async {
     await loadToken();
 
@@ -550,7 +541,6 @@ class ApiService {
     return _extractItems(_handleResponse(res));
   }
 
-// 6) إنشاء فرصة تدريب
   Future<Map<String, dynamic>> createInstitutionOpportunity(
       Map<String, dynamic> body,
       ) async {
@@ -565,7 +555,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 7) تفاصيل فرصة
   Future<Map<String, dynamic>> getInstitutionOpportunityDetails(
       int id,
       ) async {
@@ -579,7 +568,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 8) تعديل فرصة
   Future<Map<String, dynamic>> updateInstitutionOpportunity(
       int id,
       Map<String, dynamic> body,
@@ -595,7 +583,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 9) تغيير حالة الفرصة
   Future<Map<String, dynamic>> changeOpportunityStatus(
       int id,
       String status,
@@ -613,7 +600,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 10) الطلبات الواردة
   Future<List<dynamic>> getInstitutionRequests() async {
     await loadToken();
 
@@ -625,7 +611,6 @@ class ApiService {
     return _extractItems(_handleResponse(res));
   }
 
-// 11) تفاصيل طلب
   Future<Map<String, dynamic>> getInstitutionRequestDetails(
       int id,
       ) async {
@@ -639,7 +624,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 12) قبول طلب
   Future<Map<String, dynamic>> acceptInstitutionRequest(int id) async {
     await loadToken();
 
@@ -651,7 +635,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 13) رفض طلب
   Future<Map<String, dynamic>> rejectInstitutionRequest(
       int id,
       String notes,
@@ -669,7 +652,8 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 14) المتدربين الحاليين
+
+
   Future<List<dynamic>> getInstitutionInternships() async {
     await loadToken();
 
@@ -681,7 +665,6 @@ class ApiService {
     return _extractItems(_handleResponse(res));
   }
 
-// 15) تقارير متدرب
   Future<List<dynamic>> getInternshipReports(
       int id,
       ) async {
@@ -695,7 +678,6 @@ class ApiService {
     return _extractItems(_handleResponse(res));
   }
 
-// 16) تقييم متدرب
   Future<Map<String, dynamic>> evaluateInternship(
       int id,
       int score,
@@ -715,7 +697,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 17) شكاوى المؤسسة
   Future<List<dynamic>> getInstitutionComplaints() async {
     await loadToken();
 
@@ -727,7 +708,6 @@ class ApiService {
     return _extractItems(_handleResponse(res));
   }
 
-// 18) إنشاء شكوى مؤسسة
   Future<Map<String, dynamic>> createInstitutionComplaint(
       String title,
       String description,
@@ -746,7 +726,6 @@ class ApiService {
     return Map<String, dynamic>.from(_handleResponse(res));
   }
 
-// 19) المتدربين النشطين
   Future<List<dynamic>> getActiveInterns() async {
     await loadToken();
 
@@ -769,7 +748,6 @@ class ApiService {
     }).toList();
   }
 
-// 20) تأكيد كود التسجيل
   Future<Map<String, dynamic>> verifyRegistrationCode(
       String token,
       String code,
@@ -812,4 +790,288 @@ class ApiService {
 
     return Map<String, dynamic>.from(_handleResponse(res));
   }
+
+
+// Admin
+  Future<Map<String, dynamic>> getAdminDashboardStats() async {
+    await loadToken();
+
+    final response = await http.get(
+      _uri('/api/admin/dashboard-stats'),
+      headers: _headers,
+    );
+
+    return _handleResponse(response);
+  }
+
+
+  Future<List<dynamic>> getAdminStudents({
+    String? q,
+    String? department,
+    String? status,
+    int perPage = 20,
+  }) async {
+    await loadToken();
+
+    Map<String, String> query = {
+      'per_page': perPage.toString(),
+    };
+
+    if (q != null && q.isNotEmpty) query['q'] = q;
+    if (department != null && department.isNotEmpty) {
+      query['department'] = department;
+    }
+    if (status != null && status.isNotEmpty) {
+      query['status'] = status;
+    }
+
+    final uri = _uri('/api/admin/students').replace(queryParameters: query);
+
+    final response = await http.get(
+      uri,
+      headers: _headers,
+    );
+
+    final result = _handleResponse(response);
+
+    return result['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> createAdminStudent(
+      Map<String, dynamic> body) async {
+    await loadToken();
+
+    final response = await http.post(
+      _uri('/api/admin/students'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> updateAdminStudent(
+      int id,
+      Map<String, dynamic> body,
+      ) async {
+    await loadToken();
+
+    final response = await http.put(
+      _uri('/api/admin/students/$id'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> changeStudentStatus(
+      int id,
+      String status,
+      ) async {
+    await loadToken();
+
+    final response = await http.patch(
+      _uri('/api/admin/students/$id/status'),
+      headers: _headers,
+      body: jsonEncode({
+        "status": status,
+      }),
+    );
+
+    return _handleResponse(response);
+  }
+
+
+  Future<List<dynamic>> getAdminInstitutions({
+    String? q,
+    String? status,
+    int perPage = 20,
+  }) async {
+    await loadToken();
+
+    Map<String, String> query = {
+      'per_page': perPage.toString(),
+    };
+
+    if (q != null && q.isNotEmpty) query['q'] = q;
+    if (status != null && status.isNotEmpty) {
+      query['status'] = status;
+    }
+
+    final uri = _uri('/api/admin/institutions')
+        .replace(queryParameters: query);
+
+    final response = await http.get(
+      uri,
+      headers: _headers,
+    );
+
+    final result = _handleResponse(response);
+
+    return result['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> createAdminInstitution(
+      Map<String, dynamic> body,
+      ) async {
+    await loadToken();
+
+    final response = await http.post(
+      _uri('/api/admin/institutions'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> updateAdminInstitution(
+      int id,
+      Map<String, dynamic> body,
+      ) async {
+    await loadToken();
+
+    final response = await http.put(
+      _uri('/api/admin/institutions/$id'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> approveInstitution(int id) async {
+    await loadToken();
+
+    final response = await http.patch(
+      _uri('/api/admin/institutions/$id/approve'),
+      headers: _headers,
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> changeInstitutionStatus(
+      int id,
+      String status,
+      ) async {
+    await loadToken();
+
+    final response = await http.patch(
+      _uri('/api/admin/institutions/$id/status'),
+      headers: _headers,
+      body: jsonEncode({
+        "status": status,
+      }),
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<List<dynamic>> getAdminRequests() async {
+    await loadToken();
+
+    final response = await http.get(
+      _uri('/api/admin/requests'),
+      headers: _headers,
+    );
+
+    final result = _handleResponse(response);
+
+    return result['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> getAdminRequestDetails(int id) async {
+    await loadToken();
+
+    final response = await http.get(
+      _uri('/api/admin/requests/$id'),
+      headers: _headers,
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> approveAdminRequest(
+      int id, {
+        String? notes,
+      }) async {
+    await loadToken();
+
+    final response = await http.patch(
+      _uri('/api/admin/requests/$id/approve'),
+      headers: _headers,
+      body: jsonEncode({
+        "admin_notes": notes,
+      }),
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> rejectAdminRequest(
+      int id,
+      String notes,
+      ) async {
+    await loadToken();
+
+    final response = await http.patch(
+      _uri('/api/admin/requests/$id/reject'),
+      headers: _headers,
+      body: jsonEncode({
+        "admin_notes": notes,
+      }),
+    );
+
+    return _handleResponse(response);
+  }
+
+
+  Future<List<dynamic>> getAdminInternships({
+    String? status,
+    int? studentId,
+    int? institutionId,
+  }) async {
+    await loadToken();
+
+    Map<String, String> query = {};
+
+    if (status != null && status.isNotEmpty) {
+      query['status'] = status;
+    }
+
+    if (studentId != null) {
+      query['student_id'] = studentId.toString();
+    }
+
+    if (institutionId != null) {
+      query['institution_id'] = institutionId.toString();
+    }
+
+    final uri = _uri('/api/admin/internships')
+        .replace(queryParameters: query);
+
+    final response = await http.get(
+      uri,
+      headers: _headers,
+    );
+
+    final result = _handleResponse(response);
+
+    return result['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> getAdminInternshipDetails(int id) async {
+    await loadToken();
+
+    final response = await http.get(
+      _uri('/api/admin/internships/$id'),
+      headers: _headers,
+    );
+
+    return _handleResponse(response);
+  }
 }
+
+

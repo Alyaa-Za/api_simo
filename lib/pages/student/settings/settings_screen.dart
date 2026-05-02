@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/ui/app_color.dart';
 import '../../../core/token_manager.dart';
 import '../../login_screen.dart';
-import 'PrivacyPolicyScreen.dart';
+import 'privacypolicyscreen.dart';
 import 'complaints_screen.dart';
 import 'notification.dart';
 

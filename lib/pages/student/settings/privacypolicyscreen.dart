@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../core/ui/app_color.dart';
 import '../../../core/theme/language_provider.dart';
 
-class InstitutionPrivacyPolicyScreen extends StatelessWidget {
-  const InstitutionPrivacyPolicyScreen({super.key});
+class PrivacyPolicyScreen extends StatelessWidget {
+  const PrivacyPolicyScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,15 +18,15 @@ class InstitutionPrivacyPolicyScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          leading: IconButton(
-            icon: Icon(isAr ? Icons.arrow_back_ios_new_rounded : Icons.arrow_forward_ios_rounded, color: Colors.white, size: 20),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(isAr ? "سياسة الخصوصية للمؤسسة" : "Institution Privacy Policy",
+          title: Text(isAr ? "سياسة الخصوصية للطالب" : "Student Privacy Policy",
               style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
           centerTitle: true,
           flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppColors.splashGradient)),
           elevation: 0,
+          leading: IconButton(
+            icon: Icon(isAr ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios, color: Colors.white, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
         body: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -37,43 +37,43 @@ class InstitutionPrivacyPolicyScreen extends StatelessWidget {
               _buildHeaderCard(isAr, isDark),
               const SizedBox(height: 30),
 
-              _sectionTitle(isAr ? "1. سرية بيانات الطلاب" : "1. Student Data Confidentiality", isDark),
+              _sectionTitle(isAr ? "1. معلومات الهوية الأكاديمية" : "1. Academic Identity Information", isDark),
               _buildInfoCard(
                   isAr
-                      ? "تتعهد المؤسسة بالحفاظ على سرية البيانات الشخصية والأكاديمية للطلاب المتقدمين، وعدم استخدامها خارج نطاق إجراءات التدريب المعتمدة."
-                      : "The institution pledges to maintain the confidentiality of students' personal and academic data and not use it outside approved training procedures.",
+                      ? "نحن نجمع بياناتك الأساسية (الاسم الرباعي، الرقم الجامعي، التخصص، والمعدل) لضمان صحة تسجيلك في النظام وربطك بفرص التدريب التي تناسب مؤهلاتك."
+                      : "We collect your basic data (full name, student ID, specialization, and GPA) to ensure correct registration and match you with suitable training opportunities.",
                   isDark
               ),
 
-              _sectionTitle(isAr ? "2. صلاحيات الوصول" : "2. Access Privileges", isDark),
+              _sectionTitle(isAr ? "2. ملف التدريب الميداني" : "2. Field Training Profile", isDark),
               _buildInfoCard(
                   isAr
-                      ? "يقتصر حق الوصول إلى ملفات الطلاب وتقاريرهم الدورية على المشرفين الميدانيين المعينين من قبل المؤسسة فقط، لغرض المتابعة والتقييم."
-                      : "Access to student files and periodic reports is restricted only to field supervisors appointed by the institution for monitoring and evaluation.",
+                      ? "يتم تخزين تقاريرك الأسبوعية، سجل الحضور، والتقييمات النهائية بشكل آمن. هذه البيانات متاحة فقط لمشرفك الأكاديمي في الجامعة ومدربك المباشر في المؤسسة."
+                      : "Your weekly reports, attendance records, and final evaluations are stored securely. This data is only accessible to your academic supervisor and direct trainer.",
                   isDark
               ),
 
-              _sectionTitle(isAr ? "3. تقارير الأداء والتقييم" : "3. Performance Reports", isDark),
+              _sectionTitle(isAr ? "3. خصوصية التواصل" : "3. Communication Privacy", isDark),
               _buildInfoCard(
                   isAr
-                      ? "كافة التقييمات والملاحظات التي تُدخلها المؤسسة تُعد بيانات أكاديمية محمية، تُشارك فقط مع الطالب المعني والجامعة التابع لها."
-                      : "All evaluations and notes entered by the institution are protected academic data, shared only with the student and their university.",
+                      ? "رقم هاتفك وبريدك الإلكتروني يُستخدمان فقط لإرسال تنبيهات حالة طلبات التدريب، أو للتواصل من قبل المؤسسة التي وافقت على تدريبك."
+                      : "Your phone number and email are used only to send training request status alerts or for communication by the institution that approved your training.",
                   isDark
               ),
 
-              _sectionTitle(isAr ? "4. الالتزام بالمعايير" : "4. Compliance with Standards", isDark),
+              _sectionTitle(isAr ? "4. أمان الحساب" : "4. Account Security", isDark),
               _buildInfoCard(
                   isAr
-                      ? "تلتزم المؤسسة بحذف صلاحيات الوصول إلى بيانات الطالب فور انتهاء فترة التدريب، ما لم يتطلب الأمر غير ذلك لأغراض إدارية متفق عليها."
-                      : "The institution is committed to removing data access once the training period ends, unless otherwise required for agreed administrative purposes.",
+                      ? "كلمة المرور الخاصة بك مشفرة تماماً بنظام (Bcrypt)؛ لا يمكن لموظفي الجامعة أو إدارة النظام الاطلاع عليها. تقع مسؤولية الحفاظ على سرية الحساب على عاتقك."
+                      : "Your password is fully encrypted using (Bcrypt); university staff or system admins cannot access it. You are responsible for maintaining account confidentiality.",
                   isDark
               ),
 
-              _sectionTitle(isAr ? "5. حماية حساب المؤسسة" : "5. Account Protection", isDark),
+              _sectionTitle(isAr ? "5. حقوق الوصول والتعديل" : "5. Access and Correction Rights", isDark),
               _buildInfoCard(
                   isAr
-                      ? "تتحمل المؤسسة مسؤولية الحفاظ على سرية بيانات الدخول، وأي نشاط يتم من خلال الحساب يُعتبر صادراً عن المؤسسة رسمياً."
-                      : "The institution is responsible for account security, and any activity through the account is considered an official action by the entity.",
+                      ? "لك الحق الكامل في تعديل مهاراتك ونبذتك الشخصية في أي وقت. بعد انتهاء فترة التدريب، يتم أرشفة بياناتك الأكاديمية لأغراض التدقيق الجامعي فقط."
+                      : "You have the full right to edit your skills and personal bio at any time. After the training period, academic data is archived for university auditing only.",
                   isDark
               ),
 
@@ -99,16 +99,16 @@ class InstitutionPrivacyPolicyScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.admin_panel_settings_rounded, size: 60, color: AppColors.primaryBlue),
+          const Icon(Icons.security_outlined, size: 60, color: AppColors.primaryBlue),
           const SizedBox(height: 15),
-          Text(isAr ? "ميثاق الخصوصية المهني" : "Professional Privacy Charter",
+          Text(isAr ? "نحمي رحلتك المهنية" : "Protecting Your Career Journey",
               textAlign: TextAlign.center,
               style: GoogleFonts.tajawal(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
           const SizedBox(height: 10),
           Text(
             isAr
-                ? "نحن نؤمن بأن حماية البيانات هي أساس الشراكة الناجحة بين المؤسسات التعليمية وجهات التدريب."
-                : "We believe that data protection is the foundation of a successful partnership between educational institutions and training providers.",
+                ? "خصوصية بياناتك الأكاديمية هي أولويتنا القصوى لضمان تجربة تدريب آمنة."
+                : "The privacy of your academic data is our top priority to ensure a safe training experience.",
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.grey, height: 1.5, fontSize: 13),
           ),
@@ -137,7 +137,7 @@ class InstitutionPrivacyPolicyScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(25),
-        border: isDark ? Border.all(color: Colors.white.withOpacity(0.08)) : null,
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : Colors.transparent),
       ),
       child: Text(
         content,
@@ -158,8 +158,7 @@ class InstitutionPrivacyPolicyScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: GoogleFonts.tajawal(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
           const SizedBox(height: 5),
-          Text(isAr ? "نسخة المؤسسات v1.0.2" : "Institution Version v1.0.2",
-              style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          Text(isAr ? "نسخة الطالب v1.0.2" : "Student Version v1.0.2", style: const TextStyle(fontSize: 10, color: Colors.grey)),
         ],
       ),
     );

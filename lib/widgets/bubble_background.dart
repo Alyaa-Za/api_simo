@@ -20,7 +20,6 @@ class BubbleData {
   });
 }
 
-
 class BubbleBackground extends StatefulWidget {
   final Widget child;
   final BubbleStyle style;
@@ -40,7 +39,7 @@ class _BubbleBackgroundState extends State<BubbleBackground>
   late final List<AnimationController> _controllers;
   late final List<Animation<double>> _anims;
 
-    static const _splashBubbles = [
+  static const _splashBubbles = [
     BubbleData(size: 120, dx: 0.05, dy: 0.03,  opacity: 0.30, speed: 0.7, floatRange: 14),
     BubbleData(size: 90,  dx: 0.55, dy: 0.01,  opacity: 0.22, speed: 1.1, floatRange: 10),
     BubbleData(size: 160, dx: 0.25, dy: 0.18,  opacity: 0.18, speed: 0.8, floatRange: 18),
@@ -79,32 +78,48 @@ class _BubbleBackgroundState extends State<BubbleBackground>
 
   List<BubbleData> get _bubbles {
     switch (widget.style) {
-      case BubbleStyle.splash:
-        return _splashBubbles;
-      case BubbleStyle.onboarding:
-        return _onboardBubbles;
-      case BubbleStyle.login:
-        return _loginBubbles;
+      case BubbleStyle.splash: return _splashBubbles;
+      case BubbleStyle.onboarding: return _onboardBubbles;
+      case BubbleStyle.login: return _loginBubbles;
     }
   }
 
-  Color _getBubbleColor(double opacity) {
-    switch (widget.style) {
-      case BubbleStyle.splash:
-      case BubbleStyle.login:
-        return Colors.white.withOpacity(opacity);
-      case BubbleStyle.onboarding:
-        return const Color(0xFF90C8F5).withOpacity(opacity);
+  // ── [تعديل ذكي لألوان الفقاعات مَسْطرة] ──
+  Color _getBubbleColor(double opacity, bool isDark) {
+    if (isDark) {
+      // في الدارك مود نقلل الـ opacity عشان ما تسوي نشاز في العين
+      switch (widget.style) {
+        case BubbleStyle.splash:
+        case BubbleStyle.login:
+          return Colors.white.withOpacity(opacity * 0.4);
+        case BubbleStyle.onboarding:
+          return const Color(0xFF3D9BF0).withOpacity(opacity * 0.3);
+      }
+    } else {
+      // في اللايت تظل ألوانكِ الأصلية كما هي مَسْطرة
+      switch (widget.style) {
+        case BubbleStyle.splash:
+        case BubbleStyle.login:
+          return Colors.white.withOpacity(opacity);
+        case BubbleStyle.onboarding:
+          return const Color(0xFF90C8F5).withOpacity(opacity);
+      }
     }
   }
 
-  Color get _backgroundColor {
-    switch (widget.style) {
-      case BubbleStyle.splash:
-      case BubbleStyle.login:
-        return const Color(0xFF4AABF7);
-      case BubbleStyle.onboarding:
-        return const Color(0xFFF0F4F8);
+  // ── [تعديل ذكي للون الخلفية مَسْطرة] ──
+  Color _getBackgroundColor(bool isDark) {
+    if (isDark) {
+      return const Color(0xFF0F172A); // لون الـ Slate الأسود الفخم للدارك مود
+    } else {
+      // في اللايت تظل ألوانكِ الأصلية مَسْطرة
+      switch (widget.style) {
+        case BubbleStyle.splash:
+        case BubbleStyle.login:
+          return const Color(0xFF4AABF7);
+        case BubbleStyle.onboarding:
+          return const Color(0xFFF0F4F8);
+      }
     }
   }
 
@@ -130,9 +145,7 @@ class _BubbleBackgroundState extends State<BubbleBackground>
 
   @override
   void dispose() {
-    for (final c in _controllers) {
-      c.dispose();
-    }
+    for (final c in _controllers) { c.dispose(); }
     super.dispose();
   }
 
@@ -140,11 +153,13 @@ class _BubbleBackgroundState extends State<BubbleBackground>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bubbles = _bubbles;
+    // فحص حالة الثيم الحالية في الجوال
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: _backgroundColor,
+      color: _getBackgroundColor(isDark), // 👈 صار ديناميكي
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
@@ -152,12 +167,11 @@ class _BubbleBackgroundState extends State<BubbleBackground>
             return _FloatingBubble(
               animation: _anims[i],
               data: bubbles[i],
-              color: _getBubbleColor(bubbles[i].opacity),
+              color: _getBubbleColor(bubbles[i].opacity, isDark), // 👈 صار ديناميكي
               screenW: size.width,
               screenH: size.height,
             );
           }),
-
           Positioned.fill(child: widget.child),
         ],
       ),
