@@ -103,7 +103,7 @@ class StudentSettingsSideBar extends StatelessWidget {
   Widget _buildLogoutButton(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 20),
     child: ElevatedButton.icon(
-      onPressed: () => _showLogoutDialog(context),
+      onPressed: () => _showLogoutDialog,
       icon: const Icon(Icons.logout_rounded, size: 20, color: Colors.white),
       label: Text("تسجيل الخروج", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold)),
       style: ElevatedButton.styleFrom(
@@ -115,52 +115,61 @@ class StudentSettingsSideBar extends StatelessWidget {
     ),
   );
 
-  void _showLogoutDialog(BuildContext context) {
+  void _showLogoutDialog(BuildContext context, bool isAr) {
     showDialog(
       context: context,
       builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
         child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          backgroundColor: Theme.of(context).cardColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 10),
-              const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 60),
-              const SizedBox(height: 20),
-              Text("تأكيد الخروج", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 18)),
-              const SizedBox(height: 10),
-              const Text("هل أنت متأكد من رغبتك في تسجيل الخروج؟", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 13)),
-              const SizedBox(height: 30),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(shape: const StadiumBorder()),
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text("إلغاء"),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: const StadiumBorder()),
-                      onPressed: () async {
-                        await TokenManager.clearToken();
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(builder: (c) => const LoginScreen()),
-                              (route) => false,
-                        );
-                      },
-                      child: const Text("خروج", style: TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                ],
+              const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 50),
+              const SizedBox(height: 15),
+              Text(
+                isAr ? "هل تود تسجيل الخروج فعلاً؟" : "Are you sure you want to logout?",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.tajawal(fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 25),
+              Row(children: [
+                Expanded(
+                    child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        child: Text(isAr ? "إلغاء" : "Cancel")
+                    )
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        onPressed: () async {
+                          // 1. إغلاق ديالوج التنبيه فوراً
+                          Navigator.pop(ctx);
+
+                          // 2. مسح التوكن محلياً بدون إذن السيرفر لضمان الأمان
+                          await TokenManager.clearToken();
+
+                          if (!context.mounted) return;
+
+                          // 3. العودة لصفحة الدخول الموحدة وتصفير السجل
+                          Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                  (Route<dynamic> route) => false
+                          );
+                        },
+                        child: Text(isAr ? "خروج" : "Exit", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                    )
+                ),
+              ]),
             ],
           ),
         ),
       ),
     );
   }
+
 }

@@ -34,7 +34,7 @@ class InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
       const InstitutionDashboard(),
       ManageOpportunities(accountStatus: currentStatus),
       const ApplicantsRequests(),
-      const ActiveInternsList(),
+      const InternsManagementScreen(),
       InstitutionProfile(profile: widget.profile),
     ];
   }
@@ -49,7 +49,6 @@ class InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
-        // القائمة الجانبية مَسْطرة ملان العين
         endDrawer: SizedBox(
           width: MediaQuery.of(context).size.width * 0.85,
           child: const InstitutionSettings(),
@@ -60,15 +59,12 @@ class InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
           automaticallyImplyLeading: false,
           centerTitle: true,
 
-          // ── [تثبيت اللون الأزرق مَسْطرة] ──
-          // حذفنا شرط isDark لكي يظل التدرج اللوني ثابتاً في كل الأوضاع
           flexibleSpace: Container(
             decoration: const BoxDecoration(
-              gradient: AppColors.splashGradient, // يظل أزرق دائماً كما طلبتِ
+              gradient: AppColors.splashGradient,
             ),
           ),
 
-          // أيقونة اللوجو (تظهر في الهوم فقط)
           leading: _currentIndex == 0
               ? Padding(
             padding: const EdgeInsets.all(8.0),
@@ -127,7 +123,7 @@ class InstitutionMainWrapperState extends State<InstitutionMainWrapper> {
       child: Container(
         height: 70,
         decoration: BoxDecoration(
-            gradient: AppColors.buttonGradient, // يظل التدرج الأزرق ثابتاً
+            gradient: AppColors.buttonGradient,
             borderRadius: BorderRadius.circular(35),
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15)]
         ),

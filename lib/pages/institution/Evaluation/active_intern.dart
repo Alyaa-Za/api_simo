@@ -6,142 +6,105 @@ import '../../../core/api/api_s.dart';
 import '../../../core/theme/language_provider.dart';
 import 'InternDetails_tabs.dart';
 
-class ActiveInternsList extends StatefulWidget {
-  const ActiveInternsList({super.key});
+class InternsManagementScreen extends StatefulWidget {
+  const InternsManagementScreen({super.key});
 
   @override
-  State<ActiveInternsList> createState() => _ActiveInternsListState();
+  State<InternsManagementScreen> createState() => _InternsManagementScreenState();
 }
 
-class _ActiveInternsListState extends State<ActiveInternsList> {
-  Future<List<dynamic>> _fetchInterns() async {
-    return await ApiService().getActiveInterns();
-  }
+class _InternsManagementScreenState extends State<InternsManagementScreen> {
+  void _refresh() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
-    // جلب حالة اللغة والوضع الليلي
-    final langProvider = Provider.of<LanguageProvider>(context);
-    bool isAr = langProvider.locale.languageCode == 'ar';
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final isAr = Provider.of<LanguageProvider>(context).locale.languageCode == 'ar';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Directionality(
-      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: FutureBuilder<List<dynamic>>(
-          future: _fetchInterns(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    return DefaultTabController(
+      length: 2,
+      child: Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: AppBar(
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            elevation: 0,
+            title: Text(isAr ? "متابعة وتقييم المتدربين" : "Monitoring & Evaluation",
+                style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryBlue)),
+            bottom: TabBar(
+              labelColor: AppColors.primaryBlue,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: AppColors.primaryBlue,
+              indicatorWeight: 3,
+              tabs: [
+                Tab(text: isAr ? "الطلاب النشطون" : "Active Interns"),
+                Tab(text: isAr ? "الطلاب المكتملون" : "Completed"),
+              ],
+            ),
+          ),
+          body: FutureBuilder<List<dynamic>>(
+            future: ApiService().getInstitutionInternships(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+              if (snapshot.hasError) return Center(child: Text(isAr ? "فشل جلب البيانات" : "Load Failed"));
 
-            if (snapshot.hasError) {
-              return Center(
-                child: Text(
-                  isAr ? "حدث خطأ في جلب بيانات المتدربين" : "Error fetching interns data",
-                  style: const TextStyle(color: Colors.grey),
-                ),
+              final all = snapshot.data ?? [];
+              final activeList = all.where((i) => i['status'] == 'active').toList();
+              final completedList = all.where((i) => i['status'] == 'completed').toList();
+
+              return TabBarView(
+                children: [
+                  _buildInternsList(activeList, true, isAr, isDark),
+                  _buildInternsList(completedList, false, isAr, isDark),
+                ],
               );
-            }
-
-            final list = snapshot.data ?? [];
-
-            if (list.isEmpty) {
-              return _buildEmptyState(isAr, isDark);
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-              physics: const BouncingScrollPhysics(),
-              itemCount: list.length,
-              itemBuilder: (context, index) => _internCard(list[index], isDark, isAr),
-            );
-          },
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _internCard(dynamic intern, bool isDark, bool isAr) {
-    final String studentName = intern['student']?['full_name'] ?? (isAr ? "اسم المتدرب" : "Intern Name");
-    final String opportunityTitle = intern['opportunity']?['title'] ?? (isAr ? "الفرصة التدريبية" : "Training Opportunity");
+  Widget _buildInternsList(List<dynamic> list, bool isActive, bool isAr, bool isDark) {
+    if (list.isEmpty) return Center(child: Text(isAr ? "القائمة فارغة" : "No interns found"));
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: isDark ? Border.all(color: Colors.white.withOpacity(0.08)) : null,
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.2 : 0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4)
-          )
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        leading: CircleAvatar(
-          backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
-          child: const Icon(Icons.person_outline_rounded, color: AppColors.primaryBlue),
-        ),
-        title: Text(
-          studentName,
-          style: GoogleFonts.tajawal(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: isDark ? Colors.white : Colors.black87
-          ),
-        ),
-        subtitle: Text(
-          opportunityTitle,
-          style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey),
-        ),
-        trailing: Icon(
-            isAr ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_rounded,
-            size: 16,
-            color: Colors.grey.shade400
-        ),
-        onTap: () {
-          final Map<String, dynamic> dataToPass = {
-            'internship_id': intern['internship_id'],
-            'full_name': studentName,
-          };
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: list.length,
+      itemBuilder: (context, index) {
+        final intern = list[index];
+        final student = intern['student'] ?? {};
+        final String name = student['full_name'] ?? "---";
 
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => InternDetailsTabs(intern: dataToPass),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(bool isAr, bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-              Icons.group_off_rounded,
-              size: 80,
-              color: isDark ? Colors.white10 : Colors.grey.shade300
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
           ),
-          const SizedBox(height: 20),
-          Text(
-            isAr ? "لا يوجد متدربون نشطون حالياً" : "No active interns at the moment",
-            style: GoogleFonts.tajawal(
-                color: Colors.grey,
-                fontWeight: FontWeight.bold,
-                fontSize: 16
-            ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(15),
+            onTap: () async {
+              // ── [السر هنا: ننتظر نتيجة من صفحة التبويبات] ──
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => InternDetailsTabs(intern: intern)),
+              );
+              // إذا رجع 'true' يعني تم التقييم بنجاح، نحدث القائمة مَسْطرة
+              if (result == true) _refresh();
+            },
+            leading: CircleAvatar(backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
+                child: Text(name.substring(0,1).toUpperCase(), style: const TextStyle(color: AppColors.primaryBlue))),
+            title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(intern['opportunity']?['title'] ?? ""),
+            trailing: isActive
+                ? const Icon(Icons.arrow_forward_ios, size: 14)
+                : const Icon(Icons.check_circle, color: Colors.green),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -22,7 +22,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _pickDocument(bool isAr) async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'png'],
       );

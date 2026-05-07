@@ -131,21 +131,77 @@ class _InstitutionSettingsState extends State<InstitutionSettings> {
       builder: (ctx) => Directionality(
         textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
         child: AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 50),
               const SizedBox(height: 15),
-              Text(isAr ? "هل أنت متأكد من رغبتك في تسجيل الخروج؟" : "Confirm logout?"),
+              Text(
+                isAr ? "هل أنت متأكد من رغبتك في تسجيل الخروج؟" : "Confirm logout?",
+                style: GoogleFonts.tajawal(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 30),
               Row(children: [
-                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text(isAr ? "إلغاء" : "Cancel"))),
+                Expanded(
+                    child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                        child: Text(isAr ? "إلغاء" : "Cancel")
+                    )
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () async {
-                  await TokenManager.clearToken();
-                  Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (c) => const LoginScreen()), (route) => false);
-                }, child: Text(isAr ? "خروج" : "Exit", style: const TextStyle(color: Colors.white)))),
+                Expanded(
+                    child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                        onPressed: () async {
+                          // 1. إغلاق ديالوج التأكيد فوراً لتفادي تعليق الـ Context
+                          Navigator.pop(ctx);
+
+                          // 2. عرض مؤشر انتظار (Loading) ريثما يرد السيرفر مَسْطرة
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (c) => const Center(child: CircularProgressIndicator()),
+                          );
+
+                          try {
+                            // 3. ── [الاستدعاء الحقيقي للـ API مَسْطرة] ──
+                            await ApiService().logout();
+
+                            // 4. مسح التوكن محلياً بعد نجاح العملية في السيرفر
+                            await TokenManager.clearToken();
+
+                            if (!context.mounted) return;
+                            Navigator.pop(context); // إغلاق مؤشر الانتظار
+
+                            // 5. العودة لصفحة الدخول الموحدة وتصفير السجل
+                            Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                    (route) => false
+                            );
+                          } catch (e) {
+                            // في حال حدوث خطأ في السيرفر أو انقطاع النت
+                            if (!context.mounted) return;
+                            Navigator.pop(context); // إغلاق مؤشر الانتظار
+
+                            // نمسح التوكن محلياً على أية حال لضمان خروج المستخدم مَسْطرة
+                            await TokenManager.clearToken();
+
+                            Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                    (route) => false
+                            );
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(isAr ? "تم تسجيل الخروج" : "Logged out"))
+                            );
+                          }
+                        },
+                        child: Text(isAr ? "خروج" : "Exit", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                    )
+                ),
               ]),
             ],
           ),
@@ -153,6 +209,8 @@ class _InstitutionSettingsState extends State<InstitutionSettings> {
       ),
     );
   }
+
+
 
   void _showChangePasswordSheet(BuildContext context, bool isAr) {
     final oldP = TextEditingController();

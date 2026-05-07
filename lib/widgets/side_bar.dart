@@ -235,30 +235,89 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
   void _showLogoutDialog(BuildContext context, bool isAr) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 50),
-            const SizedBox(height: 15),
-            Text(isAr ? "هل تود تسجيل الخروج فعلاً؟" : "Are you sure you want to logout?", textAlign: TextAlign.center),
-            const SizedBox(height: 25),
-            Row(children: [
-              Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text(isAr ? "إلغاء" : "Cancel"))),
-              const SizedBox(width: 10),
-              Expanded(
-                  child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      onPressed: () async {
-                        await TokenManager.clearToken();
-                        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (c) => const LoginScreen()), (r) => false);
-                      },
-                      child: Text(isAr ? "خروج" : "Exit", style: const TextStyle(color: Colors.white)))),
-            ]),
-          ],
+      builder: (ctx) => Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 50),
+              const SizedBox(height: 15),
+              Text(
+                isAr ? "هل تود تسجيل الخروج فعلاً؟" : "Are you sure you want to logout?",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.tajawal(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 25),
+              Row(children: [
+                Expanded(
+                    child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        child: Text(isAr ? "إلغاء" : "Cancel")
+                    )
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(ctx); // إغلاق ديالوج التأكيد
+
+                          // 1. عرض مؤشر انتظار (Loading) ريثما يرد السيرفر مَسْطرة
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (c) => const Center(child: CircularProgressIndicator()),
+                          );
+
+                          try {
+                            // 2. ── [الاستدعاء الحقيقي للـ API مَسْطرة] ──
+                            await ApiService().logout();
+
+                            // 3. مسح التوكن محلياً بعد نجاح العملية في السيرفر
+                            await TokenManager.clearToken();
+
+                            if (!context.mounted) return;
+                            Navigator.pop(context); // إغلاق مؤشر الانتظار
+
+                            // 4. العودة لصفحة الدخول الموحدة وتصفير السجل
+                            Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                    (Route<dynamic> route) => false
+                            );
+                          } catch (e) {
+                            // في حال حدوث خطأ في السيرفر أو انقطاع النت
+                            if (!context.mounted) return;
+                            Navigator.pop(context); // إغلاق مؤشر الانتظار
+
+                            // نمسح التوكن محلياً على أية حال لضمان خروج المستخدم مَسْطرة
+                            await TokenManager.clearToken();
+
+                            Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                    (Route<dynamic> route) => false
+                            );
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(isAr ? "تم تسجيل الخروج" : "Logged out"))
+                            );
+                          }
+                        },
+                        child: Text(isAr ? "خروج" : "Exit", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                    )
+                ),
+              ]),
+            ],
+          ),
         ),
       ),
     );
   }
+
 }

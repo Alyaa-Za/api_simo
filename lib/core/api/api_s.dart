@@ -10,6 +10,7 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
+  static const String baseUrl = 'https://trainex.aladdiniot.com';
   static const String _baseUrl = 'https://trainex.aladdiniot.com';
 
   String? _token;
@@ -833,8 +834,8 @@ class ApiService {
     );
 
     final result = _handleResponse(response);
+    return (result is List) ? result : (result['data'] ?? []);
 
-    return result['data'] ?? [];
   }
 
   Future<Map<String, dynamic>> createAdminStudent(
@@ -908,8 +909,8 @@ class ApiService {
     );
 
     final result = _handleResponse(response);
+    return (result is List) ? result : (result['data'] ?? []);
 
-    return result['data'] ?? [];
   }
 
   Future<Map<String, dynamic>> createAdminInstitution(
@@ -990,7 +991,9 @@ class ApiService {
       headers: _headers,
     );
 
-    return _handleResponse(response);
+    final result = _handleResponse(response);
+    return (result is List) ? result : (result['data'] ?? []);
+
   }
 
   Future<Map<String, dynamic>> approveAdminRequest(
@@ -1058,8 +1061,8 @@ class ApiService {
     );
 
     final result = _handleResponse(response);
+    return (result is List) ? result : (result['data'] ?? []);
 
-    return result['data'] ?? [];
   }
 
   Future<Map<String, dynamic>> getAdminInternshipDetails(int id) async {
