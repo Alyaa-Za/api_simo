@@ -156,10 +156,8 @@ class _InstitutionSettingsState extends State<InstitutionSettings> {
                     child: ElevatedButton(
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                         onPressed: () async {
-                          // 1. إغلاق ديالوج التأكيد فوراً لتفادي تعليق الـ Context
                           Navigator.pop(ctx);
 
-                          // 2. عرض مؤشر انتظار (Loading) ريثما يرد السيرفر مَسْطرة
                           showDialog(
                             context: context,
                             barrierDismissible: false,
@@ -167,26 +165,21 @@ class _InstitutionSettingsState extends State<InstitutionSettings> {
                           );
 
                           try {
-                            // 3. ── [الاستدعاء الحقيقي للـ API مَسْطرة] ──
                             await ApiService().logout();
 
-                            // 4. مسح التوكن محلياً بعد نجاح العملية في السيرفر
                             await TokenManager.clearToken();
 
                             if (!context.mounted) return;
-                            Navigator.pop(context); // إغلاق مؤشر الانتظار
+                            Navigator.pop(context);
 
-                            // 5. العودة لصفحة الدخول الموحدة وتصفير السجل
                             Navigator.of(context).pushAndRemoveUntil(
                                 MaterialPageRoute(builder: (context) => const LoginScreen()),
                                     (route) => false
                             );
                           } catch (e) {
-                            // في حال حدوث خطأ في السيرفر أو انقطاع النت
                             if (!context.mounted) return;
-                            Navigator.pop(context); // إغلاق مؤشر الانتظار
+                            Navigator.pop(context);
 
-                            // نمسح التوكن محلياً على أية حال لضمان خروج المستخدم مَسْطرة
                             await TokenManager.clearToken();
 
                             Navigator.of(context).pushAndRemoveUntil(

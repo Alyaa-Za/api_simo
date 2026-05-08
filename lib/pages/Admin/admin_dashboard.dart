@@ -104,24 +104,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           isAr ? "إجمالي الطلاب" : "Total Students",
                           studentsCount,
                           Icons.people_outline, Colors.blue, isDark,
-                          onTap: () => _jump(2) // فتح تبويب الطلاب
+                          onTap: () => _jump(2)
                       ),
                       _buildWebStyleStatCard(
                           isAr ? "المؤسسات المعتمدة" : "Approved Entities",
                           institutionsCount,
                           Icons.business_center_outlined, Colors.orange, isDark,
-                          onTap: () => _jump(1) // فتح تبويب المؤسسات
+                          onTap: () => _jump(1)
                       ),
                       _buildWebStyleStatCard(
                           isAr ? "الفرص النشطة" : "Active Opps",
                           oppsCount,
-                          Icons.work_outline_rounded, Colors.green, isDark
+                          Icons.work_outline_rounded, Colors.green, isDark,
+                          onTap: () => _jump(4)
                       ),
                       _buildWebStyleStatCard(
                           isAr ? "طلبات معلقة" : "Pending Req",
                           pendingReqCount,
                           Icons.assignment_late_outlined, Colors.redAccent, isDark,
-                          onTap: () => _jump(3) // فتح تبويب الطلبات
+                          onTap: () => _jump(3)
                       ),
                     ],
                   ),

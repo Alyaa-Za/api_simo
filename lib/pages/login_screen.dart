@@ -144,7 +144,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showForceChangePasswordDialog(bool isAr) {
-    // 1. تعريف الكنترولرز للثلاث الخانات مَسْطرة
     final currentPassCtrl = TextEditingController();
     final newPassCtrl = TextEditingController();
     final confirmPassCtrl = TextEditingController();
@@ -154,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // إجباري التغيير لضمان الأمان
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
@@ -179,7 +178,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 12)),
                   const SizedBox(height: 25),
 
-                  // ── [الخانة 1: كلمة المرور الحالية] ──
                   _buildPopupTextField(
                       isAr ? "كلمة المرور الحالية" : "Current Password",
                       Icons.lock_open_rounded,
@@ -189,7 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── [الخانة 2: كلمة المرور الجديدة] ──
                   _buildPopupTextField(
                       isAr ? "كلمة المرور الجديدة" : "New Password",
                       Icons.lock_outline_rounded,
@@ -199,7 +196,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── [الخانة 3: تأكيد كلمة المرور] ──
                   _buildPopupTextField(
                       isAr ? "تأكيد كلمة المرور" : "Confirm Password",
                       Icons.lock_reset_rounded,
@@ -222,7 +218,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         elevation: 0,
                       ),
                       onPressed: () async {
-                        // ── [التحقق من المدخلات قبل الإرسال] ──
                         if (currentPassCtrl.text.isEmpty || newPassCtrl.text.isEmpty) {
                           _showSnackBar(isAr ? "يرجى ملء جميع الخانات" : "Please fill all fields", Colors.orange);
                           return;
@@ -238,7 +233,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         setModalState(() => isChanging = true);
                         try {
-                          // ── [الاستدعاء الحقيقي للدالة حقتكِ مَسْطرة] ──
                           await ApiService().changePassword(
                               currentPassCtrl.text,
                               newPassCtrl.text,
@@ -246,18 +240,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
 
                           if (!mounted) return;
-                          Navigator.pop(ctx); // إغلاق الديالوج
+                          Navigator.pop(ctx);
 
-                          // إظهار رسالة نجاح
                           ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(isAr ? "تم تحديث كلمة المرور بنجاح " : "Updated successfully"), backgroundColor: Colors.green)
                           );
 
-                          // حفظ حالة الدخول الأول في الإعدادات
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setBool('has_logged_before', true);
 
-                          // التوجه للواجهة الرئيسية
                           Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainWrapper()));
 
                         } catch (e) {
@@ -329,12 +320,11 @@ class _LoginScreenState extends State<LoginScreen> {
     bool isAr = langProvider.locale.languageCode == 'ar';
     bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // ── [تحديد نص الترحيب مَسْطرة] ──
     String welcomeText;
     if (_isFirstTime) {
-      welcomeText = isAr ? 'مرحباً بك' : 'Welcome'; // 👈 أول مرة
+      welcomeText = isAr ? 'مرحباً بك' : 'Welcome';
     } else {
-      welcomeText = isAr ? 'مرحباً بك مجدداً' : 'Welcome Back'; // 👈 قد دخل من قبل
+      welcomeText = isAr ? 'مرحباً بك مجدداً' : 'Welcome Back';
     }
 
     return Directionality(
@@ -348,7 +338,6 @@ class _LoginScreenState extends State<LoginScreen> {
             if (isDark)
               Container(color: const Color(0xFF0F172A).withOpacity(0.85)),
 
-            // أزرار التحكم العلوية
             Positioned(
               top: 55,
               right: isAr ? 25 : null,
@@ -387,7 +376,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // ── [تطبيق الترحيب الذكي هنا] ──
                         Text(welcomeText, style: GoogleFonts.tajawal(fontSize: 24, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppColors.textDark)),
                         const SizedBox(height: 6),
                         Text(isAr ? 'سجل دخولك للمتابعة' : 'Login to continue', style: GoogleFonts.tajawal(fontSize: 14, color: Colors.grey)),
@@ -454,7 +442,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ── الدوال المساعدة ──
   Widget _controlCircleBtn(IconData icon, VoidCallback onTap, {String? label}) {
     return GestureDetector(
       onTap: onTap,

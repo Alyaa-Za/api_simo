@@ -25,7 +25,6 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
 
   @override
   Widget build(BuildContext context) {
-    // استدعاء المدراء (ثيم ولغة)
     final themeProvider = Provider.of<ThemeProvider>(context);
     final langProvider = Provider.of<LanguageProvider>(context);
     bool isAr = langProvider.locale.languageCode == 'ar';
@@ -37,14 +36,12 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           children: [
-            // 1. الهيدر الفخم
             _buildHeader(isAr),
 
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  // ── قسم المظهر واللغة ──
                   _sectionTitle(isAr ? "المظهر واللغة" : "Appearance & Language"),
                   _buildSectionCard([
                     SwitchListTile(
@@ -71,7 +68,6 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
 
                   const SizedBox(height: 25),
 
-                  // ── قسم الأمان ──
                   _sectionTitle(isAr ? "الأمان والحساب" : "Security & Account"),
                   _buildSectionCard([
                     _buildMenuItem(context, Icons.lock_reset_rounded, isAr ? "تغيير كلمة المرور" : "Change Password",
@@ -80,7 +76,6 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
 
                   const SizedBox(height: 25),
 
-                  // ── قسم التواصل ──
                   _sectionTitle(isAr ? "التواصل" : "Communication"),
                   _buildSectionCard([
                     _buildMenuItem(context, Icons.notifications_active_outlined, isAr ? "مركز الإشعارات" : "Notifications",
@@ -89,7 +84,6 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
 
                   const SizedBox(height: 25),
 
-                  // ── قسم الدعم ──
                   _sectionTitle(isAr ? "الدعم والمعلومات" : "Support & Info"),
                   _buildSectionCard([
                     _buildMenuItem(context, Icons.support_agent_rounded, isAr ? "الدعم والشكاوى" : "Complaints",
@@ -102,7 +96,6 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
               ),
             ),
 
-            // 3. زر تسجيل الخروج
             _buildLogoutButton(context, isAr),
             const SizedBox(height: 30),
           ],
@@ -267,9 +260,8 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
                         ),
                         onPressed: () async {
-                          Navigator.pop(ctx); // إغلاق ديالوج التأكيد
+                          Navigator.pop(ctx);
 
-                          // 1. عرض مؤشر انتظار (Loading) ريثما يرد السيرفر مَسْطرة
                           showDialog(
                             context: context,
                             barrierDismissible: false,
@@ -277,26 +269,21 @@ class _StudentSettingsSideBarState extends State<StudentSettingsSideBar> {
                           );
 
                           try {
-                            // 2. ── [الاستدعاء الحقيقي للـ API مَسْطرة] ──
                             await ApiService().logout();
 
-                            // 3. مسح التوكن محلياً بعد نجاح العملية في السيرفر
                             await TokenManager.clearToken();
 
                             if (!context.mounted) return;
-                            Navigator.pop(context); // إغلاق مؤشر الانتظار
+                            Navigator.pop(context);
 
-                            // 4. العودة لصفحة الدخول الموحدة وتصفير السجل
                             Navigator.of(context).pushAndRemoveUntil(
                                 MaterialPageRoute(builder: (context) => const LoginScreen()),
                                     (Route<dynamic> route) => false
                             );
                           } catch (e) {
-                            // في حال حدوث خطأ في السيرفر أو انقطاع النت
                             if (!context.mounted) return;
-                            Navigator.pop(context); // إغلاق مؤشر الانتظار
+                            Navigator.pop(context);
 
-                            // نمسح التوكن محلياً على أية حال لضمان خروج المستخدم مَسْطرة
                             await TokenManager.clearToken();
 
                             Navigator.of(context).pushAndRemoveUntil(

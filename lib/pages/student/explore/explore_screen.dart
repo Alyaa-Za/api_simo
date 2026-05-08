@@ -150,7 +150,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  // ── [تصميم الكرت المطور لإبراز الحواف مَسْطرة] ──
   Widget _buildOpportunityCard(dynamic opp, bool isAr, bool isDark) {
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => OpportunityDetailScreen(opportunity: opp))),

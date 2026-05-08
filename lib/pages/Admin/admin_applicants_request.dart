@@ -23,71 +23,103 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: FutureBuilder<List<dynamic>>(
-          future: ApiService().getAdminRequests(), // استدعاء دالة الأدمن حصراً
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError) return Center(child: Text(isAr ? "فشل جلب البيانات" : "Load Failed"));
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        body: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 120,
+              pinned: true,
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              elevation: 0,
+              flexibleSpace: FlexibleSpaceBar(
+                titlePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                title: Text(isAr ? "مراجعة طلبات التدريب" : "Applications Review",
+                    style: GoogleFonts.tajawal(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.primaryBlue)),
+              ),
+              actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded, color: AppColors.primaryBlue))],
+            ),
+            FutureBuilder<List<dynamic>>(
+              future: ApiService().getAdminRequests(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
+                }
+                final list = snapshot.data ?? [];
+                if (list.isEmpty) {
+                  return SliverFillRemaining(child: Center(child: Text(isAr ? "لا توجد طلبات حالياً" : "No requests found")));
+                }
 
-            final dynamic rawData = snapshot.data;
-            final List<dynamic> list = (rawData is Map && rawData.containsKey('data'))
-                ? (rawData['data'] ?? [])
-                : (rawData is List ? rawData : []);
-
-            if (list.isEmpty) return Center(child: Text(isAr ? "لا توجد طلبات معلقة" : "No requests"));
-
-            return ListView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
-              itemCount: list.length,
-              itemBuilder: (context, index) {
-                final request = list[index];
-                final student = request['student'] ?? {};
-                final opp = request['opportunity'] ?? {};
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 15),
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(student['full_name'] ?? "---", style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(opp['title'] ?? "---", style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                      const Divider(height: 20),
-                      Row(
-                        children: [
-                          ElevatedButton(
-                            onPressed: () async {
-                              await ApiService().approveAdminRequest(request['id'] ?? request['request_id']);
-                              _refresh();
-                            },
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                            child: Text(isAr ? "اعتماد" : "Approve", style: const TextStyle(color: Colors.white)),
-                          ),
-                          const SizedBox(width: 10),
-                          ElevatedButton(
-                            onPressed: () async {
-                              await ApiService().rejectAdminRequest(request['id'] ?? request['request_id'], "رفض من الإدارة");
-                              _refresh();
-                            },
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-                            child: Text(isAr ? "رفض" : "Reject", style: const TextStyle(color: Colors.white)),
-                          ),
-                        ],
-                      )
-                    ],
+                return SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 150),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                          (context, index) => _buildRequestWebCard(list[index], isAr, isDark),
+                      childCount: list.length,
+                    ),
                   ),
                 );
               },
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildRequestWebCard(dynamic req, bool isAr, bool isDark) {
+    final student = req['student'] ?? {};
+    final opp = req['opportunity'] ?? {};
+    final String date = req['submission_date']?.toString().substring(0, 10) ?? "---";
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02), blurRadius: 15)],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _iconBox(Icons.person_pin_rounded),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(student['full_name'] ?? "---", style: GoogleFonts.tajawal(fontWeight: FontWeight.bold, fontSize: 15)),
+                Text("${isAr ? 'الرقم:' : 'ID:'} ${student['student_number'] ?? '---'}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ])),
+              _dateBadge(date),
+            ],
+          ),
+          const Divider(height: 30, thickness: 0.2),
+          _infoRow(Icons.work_outline_rounded, opp['title'] ?? "---", isDark),
+          const SizedBox(height: 8),
+          _infoRow(Icons.business_rounded, opp['institution_name'] ?? "---", isDark, isSub: true),
+          const SizedBox(height: 25),
+          Row(
+            children: [
+              Expanded(child: _actionBtn(isAr ? "موافقة" : "Approve", Icons.done_all_rounded, Colors.green, () => _handleDecision(req['request_id'], true, isAr, isDark))),
+              const SizedBox(width: 10),
+              Expanded(child: _actionBtn(isAr ? "رفض" : "Reject", Icons.close_rounded, Colors.redAccent, () => _handleDecision(req['request_id'], false, isAr, isDark))),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _iconBox(IconData i) => Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppColors.primaryBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), child: Icon(i, color: AppColors.primaryBlue, size: 22));
+
+  Widget _dateBadge(String d) => Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text(d, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)));
+
+  Widget _infoRow(IconData i, String t, bool d, {bool isSub = false}) => Row(children: [Icon(i, size: 14, color: Colors.grey), const SizedBox(width: 8), Expanded(child: Text(t, style: TextStyle(fontSize: isSub ? 11 : 13, fontWeight: isSub ? FontWeight.normal : FontWeight.w600, color: d ? Colors.white70 : Colors.black87)))]);
+
+  Widget _actionBtn(String l, IconData i, Color c, VoidCallback onTap) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(12), child: Container(padding: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: c.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: c.withValues(alpha: 0.2))), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(i, size: 16, color: c), const SizedBox(width: 8), Text(l, style: TextStyle(color: c, fontSize: 13, fontWeight: FontWeight.bold))])));
+
+  void _handleDecision(int id, bool approve, bool ar, bool dark) {
+    final ctrl = TextEditingController();
+    showDialog(context: context, builder: (ctx) => Directionality(textDirection: ar ? TextDirection.rtl : TextDirection.ltr, child: AlertDialog(backgroundColor: dark ? const Color(0xFF1E293B) : Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: Text(ar ? (approve ? "تأكيد الموافقة" : "سبب الرفض") : "Confirm"), content: TextField(controller: ctrl, maxLines: 3, decoration: InputDecoration(hintText: ar ? "اكتب ملاحظاتك..." : "Notes...", filled: true, fillColor: dark ? Colors.black26 : Colors.grey.shade50, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ar ? "إلغاء" : "Cancel")), ElevatedButton(onPressed: () async { if (!approve && ctrl.text.isEmpty) return; if (approve) { await ApiService().approveAdminRequest(id, notes: ctrl.text); } else { await ApiService().rejectAdminRequest(id, ctrl.text); } Navigator.pop(ctx); _refresh(); }, style: ElevatedButton.styleFrom(backgroundColor: approve ? Colors.green : Colors.redAccent), child: Text(ar ? "تأكيد" : "Confirm"))])));
   }
 }

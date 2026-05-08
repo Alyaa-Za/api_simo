@@ -23,7 +23,6 @@ class AdminSettings extends StatelessWidget {
         backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
         child: Column(
           children: [
-            // ── هيدر السايد بار الفخم ──
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
@@ -61,14 +60,12 @@ class AdminSettings extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // ── قائمة الإعدادات ──
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 children: [
                   _sectionTitle(isAr ? "التفضيلات" : "Preferences", isDark),
 
-                  // تعديل الثيم
                   _buildOption(
                     icon: isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                     title: isAr ? "الوضع الليلي" : "Dark Mode",
@@ -82,7 +79,6 @@ class AdminSettings extends StatelessWidget {
                     ),
                   ),
 
-                  // تعديل اللغة
                   _buildOption(
                     icon: Icons.language_rounded,
                     title: isAr ? "اللغة الحالية: العربية" : "Current Language: English",
@@ -115,7 +111,6 @@ class AdminSettings extends StatelessWidget {
               ),
             ),
 
-            // الفوتر
             Padding(
               padding: const EdgeInsets.only(bottom: 20),
               child: Text(
@@ -179,9 +174,8 @@ class AdminSettings extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await TokenManager.clearToken(); // تفريغ التوكن تماماً
+              await TokenManager.clearToken();
               if (!context.mounted) return;
-              // العودة لصفحة الدخول الموحدة اللي سويناها
               Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, shape: const StadiumBorder()),

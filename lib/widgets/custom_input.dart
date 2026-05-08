@@ -35,7 +35,6 @@ class _CustomInputState extends State<CustomInput> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Label ─────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.only(left: 2, bottom: 8),
           child: Text(
@@ -50,7 +49,6 @@ class _CustomInputState extends State<CustomInput> {
           ),
         ),
 
-        // ── Field ─────────────────────────────────────────────
         Focus(
           onFocusChange: (v) => setState(() => _isFocused = v),
           child: TextFormField(

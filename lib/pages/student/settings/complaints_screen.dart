@@ -185,7 +185,7 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
       _titleCtrl.clear(); _descCtrl.clear();
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(isAr ? "تم إرسال بلاغك بنجاح ✅" : "Ticket sent successfully ✅"),
+            content: Text(isAr ? "تم إرسال بلاغك بنجاح " : "Ticket sent successfully "),
             backgroundColor: Colors.green
         ));
       }

@@ -173,7 +173,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
       await ApiService().applyToOpportunity(oppId, msg, "تم التقديم عبر الجوال");
       _showSweetMessage(
           title: isAr ? "تم بنجاح!" : "Applied Successfully!",
-          msg: isAr ? "طلبك قيد المراجعة الآن " : "Your request is under review ✅",
+          msg: isAr ? "طلبك قيد المراجعة الآن " : "Your request is under review",
           isError: false
       );
     } catch (e) {

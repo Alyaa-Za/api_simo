@@ -87,12 +87,10 @@ class _InternsManagementScreenState extends State<InternsManagementScreen> {
           child: ListTile(
             contentPadding: const EdgeInsets.all(15),
             onTap: () async {
-              // ── [السر هنا: ننتظر نتيجة من صفحة التبويبات] ──
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (c) => InternDetailsTabs(intern: intern)),
               );
-              // إذا رجع 'true' يعني تم التقييم بنجاح، نحدث القائمة مَسْطرة
               if (result == true) _refresh();
             },
             leading: CircleAvatar(backgroundColor: AppColors.primaryBlue.withOpacity(0.1),

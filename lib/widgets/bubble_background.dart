@@ -84,10 +84,8 @@ class _BubbleBackgroundState extends State<BubbleBackground>
     }
   }
 
-  // ── [تعديل ذكي لألوان الفقاعات مَسْطرة] ──
   Color _getBubbleColor(double opacity, bool isDark) {
     if (isDark) {
-      // في الدارك مود نقلل الـ opacity عشان ما تسوي نشاز في العين
       switch (widget.style) {
         case BubbleStyle.splash:
         case BubbleStyle.login:
@@ -96,7 +94,6 @@ class _BubbleBackgroundState extends State<BubbleBackground>
           return const Color(0xFF3D9BF0).withOpacity(opacity * 0.3);
       }
     } else {
-      // في اللايت تظل ألوانكِ الأصلية كما هي مَسْطرة
       switch (widget.style) {
         case BubbleStyle.splash:
         case BubbleStyle.login:
@@ -107,12 +104,10 @@ class _BubbleBackgroundState extends State<BubbleBackground>
     }
   }
 
-  // ── [تعديل ذكي للون الخلفية مَسْطرة] ──
   Color _getBackgroundColor(bool isDark) {
     if (isDark) {
-      return const Color(0xFF0F172A); // لون الـ Slate الأسود الفخم للدارك مود
+      return const Color(0xFF0F172A);
     } else {
-      // في اللايت تظل ألوانكِ الأصلية مَسْطرة
       switch (widget.style) {
         case BubbleStyle.splash:
         case BubbleStyle.login:
@@ -153,13 +148,12 @@ class _BubbleBackgroundState extends State<BubbleBackground>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bubbles = _bubbles;
-    // فحص حالة الثيم الحالية في الجوال
     bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: _getBackgroundColor(isDark), // 👈 صار ديناميكي
+      color: _getBackgroundColor(isDark),
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
@@ -167,7 +161,7 @@ class _BubbleBackgroundState extends State<BubbleBackground>
             return _FloatingBubble(
               animation: _anims[i],
               data: bubbles[i],
-              color: _getBubbleColor(bubbles[i].opacity, isDark), // 👈 صار ديناميكي
+              color: _getBubbleColor(bubbles[i].opacity, isDark),
               screenW: size.width,
               screenH: size.height,
             );

@@ -36,11 +36,11 @@ class AdminMainWrapperState extends State<AdminMainWrapper> {
     super.initState();
     _pages = [
       const AdminDashboard(),
-      const ManageInstitutions(), // 1
-      const AdminManageStudents(), // 2
-      const AdminRequestsScreen(), // 3
-      const InternshipMonitor(), // 4
-      const AdminComplaintsScreen(), // 5
+      const ManageInstitutions(),
+      const AdminManageStudents(),
+      const AdminRequestsScreen(),
+      const InternshipMonitor(),
+      const AdminComplaintsScreen(),
     ];
   }
 

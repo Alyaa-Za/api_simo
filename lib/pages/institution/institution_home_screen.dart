@@ -76,21 +76,21 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
                               stats['total_opportunities']?.toString() ?? "0",
                               Icons.business_center_outlined,
                               Colors.blue, isDark,
-                                  () => _navigateToTab(1) // ينتقل لإدارة الفرص
+                                  () => _navigateToTab(1)
                           ),
                           _buildStatCard(
                               isAr ? "المتدربون النشطون" : "Active Interns",
                               stats['active_interns']?.toString() ?? "0",
                               Icons.people_outline,
                               Colors.teal, isDark,
-                                  () => _navigateToTab(3) // ينتقل للمتابعة والتقييم
+                                  () => _navigateToTab(3)
                           ),
                           _buildStatCard(
                               isAr ? "طلبات المراجعة" : "Pending Requests",
                               pendingCount.toString(),
                               Icons.hourglass_empty_rounded,
                               Colors.orange, isDark,
-                                  () => _navigateToTab(2) // ينتقل لطلبات المتقدمين
+                                  () => _navigateToTab(2)
                           ),
                           _buildStatCard(
                               isAr ? "البلاغات" : "Complaints",
@@ -98,7 +98,6 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
                               Icons.report_problem_outlined,
                               Colors.redAccent, isDark,
                                   () {
-                                // إذا كان عندك صفحة بلاغات مستقلة أو تنبيه
                                 ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text(isAr ? "مركز البلاغات قيد التطوير" : "Complaints center coming soon"))
                                 );
@@ -124,7 +123,7 @@ class _InstitutionDashboardState extends State<InstitutionDashboard> {
 
   Widget _buildStatCard(String label, String value, IconData icon, Color color, bool isDark, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap, // 👈 تفعيل الضغط
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E293B) : Colors.white,

@@ -71,12 +71,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
-                // 1. الهيدر الملكي (VIP)
                 SliverToBoxAdapter(
                   child: _buildVipHeader(picUrl, name, email, percentage, isDark, isAr),
                 ),
 
-                // 2. أزرار التحكم السريعة
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 25, 20, 10),
@@ -95,7 +93,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   ),
                 ),
 
-                // 3. قسم المسيرة التدريبية
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(25, 30, 25, 10),

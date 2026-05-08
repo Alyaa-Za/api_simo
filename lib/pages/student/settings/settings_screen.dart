@@ -147,15 +147,12 @@ class StudentSettingsSideBar extends StatelessWidget {
                     child: ElevatedButton(
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                         onPressed: () async {
-                          // 1. إغلاق ديالوج التنبيه فوراً
                           Navigator.pop(ctx);
 
-                          // 2. مسح التوكن محلياً بدون إذن السيرفر لضمان الأمان
                           await TokenManager.clearToken();
 
                           if (!context.mounted) return;
 
-                          // 3. العودة لصفحة الدخول الموحدة وتصفير السجل
                           Navigator.of(context).pushAndRemoveUntil(
                               MaterialPageRoute(builder: (context) => const LoginScreen()),
                                   (Route<dynamic> route) => false

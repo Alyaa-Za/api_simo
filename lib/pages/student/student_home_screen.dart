@@ -26,12 +26,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     _loadDashboardData();
   }
 
-  // ── [دالة استخراج المصفوفة بذكاء مَسْطرة ملان العين] ──
   List<dynamic> _extractOppsList(dynamic res) {
     if (res == null) return [];
     if (res is List) return res;
     if (res is Map) {
-      // البحث في المسارات المحتملة للباك آند حقكم
       if (res['data'] != null) {
         if (res['data'] is List) return res['data'];
         if (res['data'] is Map && res['data']['items'] != null) return res['data']['items'];
@@ -52,19 +50,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
       if (mounted) {
         setState(() {
-          // 1. استخراج البروفايل
           if (pRes != null && pRes['data'] != null) {
             profileData = Map<String, dynamic>.from(pRes['data']);
           }
-
-          // 2. استخراج الفرص الخمس الأخيرة (الشغل الصح هنا)
           List<dynamic> allOpps = _extractOppsList(oRes);
-          // عكس القائمة لأخذ الأحدث ثم أخذ 5
           latestOpportunities = allOpps.reversed.take(5).toList();
 
-          debugPrint("Check Opps Count: ${latestOpportunities.length}"); // للتأكد في الكونسول
+          debugPrint("Check Opps Count: ${latestOpportunities.length}");
 
-          // 3. استخراج التدريب
           if (iRes != null && iRes['data'] != null) {
             internshipData = Map<String, dynamic>.from(iRes['data']);
           }
@@ -101,7 +94,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // كروت الإحصائيات
             Row(
               children: [
                 _buildStatBox(isAr ? "اكتمال الملف" : "Profile", isComplete ? (isAr ? "مكتمل" : "Complete") : "$percent%", isComplete ? Colors.green : Colors.orange, Icons.person_pin_rounded, isDark),
@@ -115,7 +107,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
             const SizedBox(height: 30),
 
-            // عنوان قسم الفرص
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -128,7 +119,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             ),
             const SizedBox(height: 10),
 
-            // قائمة الفرص مَسْطرة
             _buildOppsList(latestOpportunities, isAr, isDark),
           ],
         ),

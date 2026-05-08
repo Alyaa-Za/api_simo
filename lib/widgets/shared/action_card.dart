@@ -37,7 +37,6 @@ class ActionCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Icon Box ────────────────────────────────────
             Container(
               width: 38,
               height: 38,
@@ -48,7 +47,6 @@ class ActionCard extends StatelessWidget {
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 10),
-            // ── Label ───────────────────────────────────────
             Text(
               label,
               style: GoogleFonts.inter(

@@ -10,7 +10,6 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // جلب حالة اللغة والوضع الليلي
     final langProvider = Provider.of<LanguageProvider>(context);
     bool isAr = langProvider.locale.languageCode == 'ar';
     bool isDark = Theme.of(context).brightness == Brightness.dark;

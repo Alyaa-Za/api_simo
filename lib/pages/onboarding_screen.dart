@@ -87,10 +87,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        // ── [تعديل مَسْطرة] ── جعل لون الخلفية يتبع الثيم الحقيقي للجهاز
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Container(
-          // في اللايت نعطيها لون ناعم مائل للزرقة، وفي الدارك تظل سوداء بالكامل
           color: isDark ? null : const Color(0xFFF4F7FF),
           child: BubbleBackground(
             child: SafeArea(

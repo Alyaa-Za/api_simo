@@ -23,7 +23,6 @@ class _InternDetailsTabsState extends State<InternDetailsTabs> with SingleTicker
     _tabController = TabController(length: 3, vsync: this);
   }
 
-  // ── [دالة إرسال التقييم والترحيل اللحظي مَسْطرة] ──
   Future<void> _submitEvaluation() async {
     if (_scoreController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("يرجى إدخال الدرجة أولاً")));
@@ -32,7 +31,6 @@ class _InternDetailsTabsState extends State<InternDetailsTabs> with SingleTicker
 
     setState(() => _loading = true);
     try {
-      // استدعاء الـ API حقك
       await ApiService().evaluateInternship(
         widget.intern['internship_id'] ?? widget.intern['id'],
         int.parse(_scoreController.text),
@@ -41,11 +39,9 @@ class _InternDetailsTabsState extends State<InternDetailsTabs> with SingleTicker
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("تم رصد التقييم وترحيل الطالب بنجاح ✅"), backgroundColor: Colors.green),
+          const SnackBar(content: Text("تم رصد التقييم وترحيل الطالب بنجاح "), backgroundColor: Colors.green),
         );
 
-        // ── [السر هنا] ──
-        // نغلق الصفحة ونرجع 'true' للصفحة السابقة عشان تحدث القائمة فوراً
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -82,15 +78,14 @@ class _InternDetailsTabsState extends State<InternDetailsTabs> with SingleTicker
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildInfoTab(student, isDark),    // التبويب 1
-          _buildReportsTab(isDark),         // التبويب 2
-          _buildEvaluationTab(isDark),      // التبويب 3
+          _buildInfoTab(student, isDark),
+          _buildReportsTab(isDark),
+          _buildEvaluationTab(isDark),
         ],
       ),
     );
   }
 
-  // 1. تبويب المعلومات
   Widget _buildInfoTab(Map student, bool isDark) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -106,7 +101,6 @@ class _InternDetailsTabsState extends State<InternDetailsTabs> with SingleTicker
     );
   }
 
-  // 2. تبويب التقارير (عرض فقط)
   Widget _buildReportsTab(bool isDark) {
     return FutureBuilder<List<dynamic>>(
       future: ApiService().getInternshipReports(widget.intern['internship_id'] ?? widget.intern['id']),
@@ -131,7 +125,6 @@ class _InternDetailsTabsState extends State<InternDetailsTabs> with SingleTicker
     );
   }
 
-  // 3. تبويب التقييم مَسْطرة ملان العين
   Widget _buildEvaluationTab(bool isDark) {
     if (widget.intern['status'] == 'completed') {
       return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check_circle, color: Colors.green, size: 60), SizedBox(height: 10), Text("هذا الطالب تم تقييمه مسبقاً")]));
